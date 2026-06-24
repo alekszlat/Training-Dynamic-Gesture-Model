@@ -1,0 +1,43 @@
+# uv / Python environment
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Local/editor files
+.vscode/
+.idea/
+.DS_Store
+
+# Secrets / local config
+.env
+.env.*
+*.pem
+*.key
+*.token
+
+# Data
+data/raw/*
+data/processed/*
+
+# Keep folder placeholders
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+
+# Model files
+*.pt
+*.pth
+checkpoints/
+
+# Generated outputs
+outputs/*
+!outputs/.gitkeep
+
+# Agent files
+.agents/
+AGENTS.md
+docs/
+
+#Personal notes
+notebooks/
