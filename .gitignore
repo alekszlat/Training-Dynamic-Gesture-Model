@@ -4,6 +4,7 @@ __pycache__/
 *.pyc
 .pytest_cache/
 .ipynb_checkpoints/
+*.egg-info/
 
 # Local/editor files
 .vscode/
@@ -41,3 +42,6 @@ docs/
 
 #Personal notes
 notebooks/
+
+# MediaPipe models
+src/gesture_transformer/models/hand_landmarker.task
