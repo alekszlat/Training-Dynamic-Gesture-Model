@@ -12,6 +12,14 @@ class JesterAnnotation:
     raw_label: str
 
 
+SUPPORTED_JESTER_LABELS = {
+    "Swiping Left",
+    "Swiping Right",
+    "Swiping Up",
+    "Swiping Down",
+    "Doing Other Things",
+}
+
 class JesterManifestBuilder:
     """Build manifest rows for Jester gesture frame folders."""
 
@@ -51,6 +59,9 @@ class JesterManifestBuilder:
         sample_index = 1
 
         for annotation in annotations:
+            if annotation.raw_label not in SUPPORTED_JESTER_LABELS:
+                continue
+
             internal_label = self.label_mapper.converter_label(annotation.raw_label)
 
             if internal_label is None:
