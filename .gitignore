@@ -45,3 +45,9 @@ notebooks/
 
 # MediaPipe models
 src/gesture_transformer/models/hand_landmarker.task
+
+# Data files
+data/raw/
+data/interim/
+data/processed/
+data/manifests/samples.csv

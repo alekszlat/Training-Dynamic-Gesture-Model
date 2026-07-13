@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 from pathlib import Path
 
 import cv2 as cv
@@ -19,32 +19,11 @@ VisionRunningMode = mp.tasks.vision.RunningMode
 
 @dataclass(frozen=True)
 class LandmarkExtractionResult:
-    """Result of running MediaPipe over one gesture sample."""
+    """Result of extracting landmarks from one gesture sample."""
 
     landmarks: np.ndarray
     total_frames: int
     detected_frames: int
-
-
-@dataclass(frozen=True)
-class LandmarkMetadata:
-    """One row for metadata.csv after landmark extraction."""
-
-    sample_id: str
-    source_type: str
-    source_name: str
-    label: str
-    raw_label: str
-    path: str
-    total_frames: int
-    detected_frames: int
-    detection_rate: float
-    status: str
-    landmark_path: str
-    error: str
-
-    def to_csv_row(self) -> dict[str, object]:
-        return asdict(self)
 
 
 class LandmarkExtractor:
@@ -52,15 +31,12 @@ class LandmarkExtractor:
 
     def __init__(
         self,
-        model_path: str | Path = "hand_landmarker.task",
+        model_path: Path,
         num_hands: int = 1,
         min_detection_confidence: float = 0.5,
         min_presence_confidence: float = 0.5,
         min_tracking_confidence: float = 0.5,
-        min_detection_rate: float = 0.7,
     ) -> None:
-        self.min_detection_rate = min_detection_rate
-
         options = HandLandmarkerOptions(
             base_options=BaseOptions(model_asset_path=str(model_path)),
             running_mode=VisionRunningMode.IMAGE,
@@ -72,89 +48,20 @@ class LandmarkExtractor:
 
         self._landmarker = HandLandmarker.create_from_options(options)
 
-    def extract_and_save(
-        self,
-        *,
-        frames: Iterable[Frame],
-        sample_id: str,
-        source_type: str,
-        source_name: str,
-        label: str,
-        raw_label: str,
-        sample_path: Path,
-        landmarks_dir: Path,
-    ) -> LandmarkMetadata:
-        """
-        Extract landmarks for one sample, save valid landmarks as .npy,
-        and return one metadata row.
-
-        Saved landmark file:
-            data/interim/landmarks/{sample_id}.npy
-
-        Landmark shape:
-            [num_detected_frames, 21, 3]
-        """
-
-        try:
-            result = self.extract(frames)
-            status, error = self._get_status(result)
-
-            landmark_path = ""
-
-            if status == "ok":
-                landmarks_dir.mkdir(parents=True, exist_ok=True)
-
-                output_path = landmarks_dir / f"{sample_id}.npy"
-                np.save(output_path, result.landmarks)
-
-                landmark_path = str(output_path)
-
-            return LandmarkMetadata(
-                sample_id=sample_id,
-                source_type=source_type,
-                source_name=source_name,
-                label=label,
-                raw_label=raw_label,
-                path=str(sample_path),
-                total_frames=result.total_frames,
-                detected_frames=result.detected_frames,
-                detection_rate=self._calculate_detection_rate(
-                    result.total_frames,
-                    result.detected_frames,
-                ),
-                status=status,
-                landmark_path=landmark_path,
-                error=error,
-            )
-
-        except Exception as error:
-            return LandmarkMetadata(
-                sample_id=sample_id,
-                source_type=source_type,
-                source_name=source_name,
-                label=label,
-                raw_label=raw_label,
-                path=str(sample_path),
-                total_frames=0,
-                detected_frames=0,
-                detection_rate=0.0,
-                status="error",
-                landmark_path="",
-                error=str(error),
-            )
-
     def extract(self, frames: Iterable[Frame]) -> LandmarkExtractionResult:
         """
-        Extract landmarks from all frames in one gesture sample.
+        Extract landmarks from one gesture sample.
 
         Returns:
-            landmarks with shape [num_detected_frames, 21, 3]
+            landmarks: [total_frames, 21, 3]
 
-        Frames where no hand is detected are skipped.
+        If MediaPipe does not detect a hand in a frame,
+        a zero frame with shape [21, 3] is added.
         """
 
         sample_landmarks: list[np.ndarray] = []
         total_frames = 0
+        detected_frames = 0
 
         for frame in frames:
             total_frames += 1
@@ -162,7 +69,9 @@ class LandmarkExtractor:
             frame_landmarks = self._extract_frame_landmarks(frame)
 
             if frame_landmarks is None:
-                continue
+                frame_landmarks = np.zeros((21, 3), dtype=np.float32)
+            else:
+                detected_frames += 1
 
             sample_landmarks.append(frame_landmarks)
 
@@ -174,14 +83,14 @@ class LandmarkExtractor:
         return LandmarkExtractionResult(
             landmarks=landmarks,
             total_frames=total_frames,
-            detected_frames=len(sample_landmarks),
+            detected_frames=detected_frames,
         )
 
     def _extract_frame_landmarks(self, frame: Frame) -> np.ndarray | None:
         """
         Extract landmarks from one frame.
 
-        OpenCV returns BGR frames.
+        OpenCV gives BGR frames.
         MediaPipe expects RGB/SRGB image data.
         """
 
@@ -208,37 +117,6 @@ class LandmarkExtractor:
         )
 
         return landmarks
-
-    def _get_status(self, result: LandmarkExtractionResult) -> tuple[str, str]:
-        """Decide whether the extracted sample is usable."""
-
-        if result.total_frames == 0:
-            return "error", "no_frames_found"
-
-        if result.detected_frames == 0:
-            return "rejected_no_landmarks", "no_hand_landmarks_detected"
-
-        detection_rate = self._calculate_detection_rate(
-            result.total_frames,
-            result.detected_frames,
-        )
-
-        if detection_rate < self.min_detection_rate:
-            return "rejected_low_detection_rate", "too_few_detected_frames"
-
-        return "ok", ""
-
-    def _calculate_detection_rate(
-        self,
-        total_frames: int,
-        detected_frames: int,
-    ) -> float:
-        """Calculate detected_frames / total_frames safely."""
-
-        if total_frames == 0:
-            return 0.0
-
-        return round(detected_frames / total_frames, 4)
 
     def close(self) -> None:
         """Release MediaPipe resources."""
