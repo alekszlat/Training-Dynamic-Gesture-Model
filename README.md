@@ -2,15 +2,6 @@
 
 Creating a model for tracking and identifying dynamic gestures based on a science paper
 
-## Workflow:
-
-We use test driven develompent to create a model for tracking and identifying dynamic gestures. The workflow is as follows:
-
-1. Impement spec/section of the project.
-2. Write a test for the implemented spec.
-3. Run the test and see it fail.
-4. Redo the spec till you make the test pass.
-
 ## TO DOs:
 
 Step 1: Open webcam with OpenCV
