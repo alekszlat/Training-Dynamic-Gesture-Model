@@ -1,12 +1,12 @@
-from src.gesture_transformer.datasets.landmark_extractor import LandmarkExtractor
-from src.gesture_transformer.datasets.landmark_saver import LandmarkSaver
-from src.gesture_transformer.datasets.metadata_writer import MetadataWriter
+from src.gesture_transformer.datasets.landmark_extraction.landmark_extractor import LandmarkExtractor
+from src.gesture_transformer.datasets.landmark_extraction.landmark_saver import LandmarkSaver
+from src.gesture_transformer.datasets.landmark_extraction.metadata_writer import MetadataWriter
 from src.gesture_transformer.datasets.manifest.sample_manifest_reader import (
     SampleManifestReader,
 )
 from src.gesture_transformer.datasets.readers.reader_factory import ReaderFactory
 
-from src.gesture_transformer.datasets.landmark_extraction_pipeline import LandmarkExtractionPipeline
+from src.gesture_transformer.datasets.landmark_extraction.landmark_extraction_pipeline import LandmarkExtractionPipeline
 from pathlib import Path
 
 if __name__ == "__main__":

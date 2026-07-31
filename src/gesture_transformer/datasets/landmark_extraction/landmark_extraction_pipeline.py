@@ -1,12 +1,11 @@
-from pathlib import Path
 from typing import Iterable
 
-from src.gesture_transformer.datasets.landmark_extractor import (
+from gesture_transformer.datasets.landmark_extraction.landmark_extractor import (
     LandmarkExtractor,
     LandmarkExtractionResult,
 )
-from src.gesture_transformer.datasets.landmark_saver import LandmarkSaver
-from src.gesture_transformer.datasets.metadata_writer import (
+from gesture_transformer.datasets.landmark_extraction.landmark_saver import LandmarkSaver
+from gesture_transformer.datasets.landmark_extraction.metadata_writer import (
     MetadataWriter,
     MetadataRecord,
 )
