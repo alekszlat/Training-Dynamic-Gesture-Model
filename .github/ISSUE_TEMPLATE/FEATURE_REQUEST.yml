@@ -1,0 +1,86 @@
+name: Feature request
+description: Suggest a new feature or improvement to the project.
+title: "[Feature]: "
+labels:
+  - enhancement
+
+body:
+  - type: markdown
+    attributes:
+      value: >-
+        Title this by the problem rather than the solution — "No way to run a single
+        test file" rather than "Add a --file flag". The title is what people search,
+        and the fix may turn out to be something else.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What problem or limitation would this feature solve?
+      placeholder: |
+        Describe the specific situation in which the problem occurs.
+        Explain what you expected to be able to do and what currently prevents it.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe the desired outcome or behavior. Focus on what the project should provide rather than prescribing a specific implementation.
+      placeholder: |
+        Describe what you would like the project to support or do differently.
+        If applicable, provide an example of the expected behavior or usage.
+    validations:
+      required: false
+
+  - type: textarea
+    id: workaround
+    attributes:
+      label: Current workaround
+      description: Describe how you currently work around the problem and any significant limitations or costs associated with doing so.
+      placeholder: |
+        Describe the workaround you currently use, if any.
+        Explain how the workaround affects your workflow or why it is insufficient.
+    validations:
+      required: false
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope and prior discussion
+      description: Explain why this functionality belongs in the project and provide links to relevant discussions, issues, documentation, or related proposals.
+      placeholder: |
+        Explain how this request relates to the project's purpose or existing functionality.
+        Include links to relevant issues, discussions, documentation, or related proposals where applicable.
+    validations:
+      required: false
+
+  - type: input
+    id: version
+    attributes:
+      label: Version in use
+      description: Provide the version, release, or commit where you encountered the limitation.
+    validations:
+      required: false
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Provide any additional information that may help evaluate the request, such as screenshots, examples, links, prior art, or relevant constraints.
+      placeholder: |
+        Provide any additional information relevant to evaluating this request.
+        Include screenshots, examples, links, references to similar implementations, or constraints where applicable.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: implementation
+    attributes:
+      label: Implementation
+      description: Ticking this does not affect whether the request is accepted. Maintainers will help you through the process, including if it would be your first contribution here.
+      options:
+        - label: I would like to implement this and open a pull request.
+    validations:
+      required: false
