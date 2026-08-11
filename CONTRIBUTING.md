@@ -29,14 +29,17 @@ Use the **Feature request** form. Describe what you were trying to do, not the i
 
 ## Workflow
 
-The project follows [GitHub flow](https://docs.github.com/en/get-started/using-github/github-flow): one permanent branch, short-lived branches off it, and every change merged back through a pull request. `main` is the single source of truth and is kept in a working state.
+The project follows [GitHub flow](https://docs.github.com/en/get-started/using-github/github-flow): one permanent branch, short-lived branches off it, every change merged back through a pull request. `main` is the single source of truth and stays in a working state.
 
-A change moves through four stages:
+**Issue → Discussion → Trello → Feature branch from `main` → Work → Pull request → CI and review → Merge to `main` → Tag a release, when needed.**
 
-1. **Issue.** Every change starts as one, on the bug report or feature request form.
-2. **Discussion.** Scope, approach, and whether to do it at all are settled in the issue thread before code is written.
-3. **Trello.** Accepted issues become cards on the project board. The tracker holds *what and why*; the board holds *where it is now*.
-4. **Pull request.** Branch, implement, open it against `main`, get it reviewed, squash-merge.
+1. **Issue.** Every change starts as one.
+2. **Discussion.** Scope and approach settled in the thread first.
+3. **Trello.** Accepted issues become cards on the board.
+4. **Branch and work.** Branch from `main`, name it `<type>/<short-description>`.
+5. **Pull request.** Open it against `main`, fill in the template.
+6. **CI and review.** No CI yet ([#6](https://github.com/alekszlat/Training-Dynamic-Gesture-Model/issues/6)); until then the other person reviewing and approving is the only gate.
+7. **Merge and release.** Releases are tagged on `main` when needed.
 
 Branch from the latest `main` and name it `<type>/<short-description>`:
 
@@ -49,7 +52,6 @@ Branch from the latest `main` and name it `<type>/<short-description>`:
 
 Branch prefixes are spelled out (`feature/`), commit types are not (`feat:`).
 
-- A branch lives two or three days. If the change is bigger than that, split it: long branches diverge, and the merge pays for it.
 - Nothing reaches `main` except through a pull request, even while nothing enforces it.
 - Pull requests are squash-merged, so the title becomes the commit message. Delete the branch afterwards.
 
