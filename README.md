@@ -1,35 +1,144 @@
-# Training-Dynamic-Gesture-Model
+# Dynamic Gesture Recognition Model
 
-Creating a model for tracking and identifying dynamic gestures based on a science paper
+Training pipeline for a dynamic hand-gesture recognition model using MediaPipe hand landmarks and a Transformer Encoder.
+The project processes gesture recordings into normalized landmark tensors that can later be used for model training and evaluation.
 
-## TO DOs:
+## Current Status
 
-Step 1: Open webcam with OpenCV
-Explanation: Use OpenCV to access the webcam and display the video feed in a window. This will allow you to capture real-time video frames for gesture recognition.
+The project is currently under development.
 
-Step 2: Detect hand landmarks with MediaPipe
-Explanation: Use MediaPipe's hand tracking solution to detect and extract hand landmarks from the video frames. This will provide the necessary data for gesture recognition.
+The intended workflow is:
 
-Step 3: Save landmarks for one gesture
-Explanation: Save the detected hand landmarks for a single gesture in a structured format for training purposes.
+```text
+Dataset Preparation -> Training -> Evaluation
+```
 
-Step 4: Save landmarks for multiple gestures
-Explanation: Extend the previous step to save hand landmarks for multiple gestures, creating a dataset that can be used to train the gesture recognition model.
+The current implementation primarily focuses on the dataset preparation pipeline.
 
-Step 5: Pad all samples to fixed length
-Explanation: Ensure that all gesture samples have a consistent length by padding shorter sequences with zeros or truncating longer sequences. This is important for training the model effectively.
+## Pipeline
 
-Step 6: Train a simple baseline classifier
-Explanation: Train a simple baseline classifier (only one movement) using the saved hand landmark data to establish a performance benchmark for gesture recognition.
+Dataset preparation is divided into three stages:
 
-Step 7: Train Transformer Encoder
-Explanation: Train a Transformer Encoder model using the saved hand landmark data to improve gesture recognition performance. The Transformer architecture is well-suited for sequence data and can capture complex temporal dependencies in gestures.
+```text
+01_manifest_builder.py -> 02_landmark_extraction.py -> 03_build_tensors.py
+```
 
-Step 8: Evaluate with confusion matrix
-Explanation: Evaluate the performance of the trained model using a confusion matrix to visualize the classification results and identify areas for improvement.
+More detailed information about the pipeline, data contracts, and tensor shapes can be found in [`docs/`](docs/).
 
-Step 9: Run real-time prediction
-Explanation: Implement real-time gesture recognition by feeding the live video feed from the webcam into the trained model and displaying the predicted gestures on the screen.
+## Requirements
 
-Step 10: Map gestures to keyboard/mouse actions
-Explanation: Create a mapping between recognized gestures and specific keyboard or mouse actions, allowing users to control their computer using dynamic gestures.
+* Python 3.12
+* `uv`
+* MediaPipe
+* OpenCV
+* NumPy
+* PyTorch
+
+The complete dependency list is maintained in `pyproject.toml`.
+
+## Setup
+
+Clone the repository:
+
+```bash
+git clone <repository-url>
+cd Training-Dynamic-Gesture-Model
+```
+
+Install the dependencies:
+
+```bash
+uv sync
+```
+
+## Data
+
+The project expects datasets under the `data/` directory.
+
+```text
+data/
+├── raw/            # Original datasets and recordings
+├── manifests/      # Dataset manifests
+├── interim/        # Intermediate processing results
+└── processed/      # Metadata and generated training tensors
+```
+
+Large datasets and generated artifacts are not intended to be committed to the repository.
+
+See the project documentation for more information about supported datasets and expected data structure.
+
+## Running the Dataset Pipeline
+
+### 1. Build the manifest
+
+```bash
+uv run 01_manifest_builder.py
+```
+
+Creates:
+
+```text
+data/manifests/samples.csv
+```
+
+### 2. Extract landmarks
+
+```bash
+uv run 02_landmark_extraction.py
+```
+
+Creates landmark data and processing metadata:
+
+```text
+data/interim/landmarks/
+data/processed/metadata.csv
+```
+
+### 3. Build tensors
+
+```bash
+uv run 03_build_tensors.py
+```
+
+Creates the tensors used by the training pipeline:
+
+```text
+data/processed/train.pt
+data/processed/val.pt
+data/processed/label_to_index.json
+```
+
+## Development
+
+Before committing changes, install the project's pre-commit hooks:
+
+```bash
+uv run pre-commit install
+```
+
+Run all configured checks manually with:
+
+```bash
+uv run pre-commit run --all-files
+```
+
+Pull requests are also checked through CI.
+
+## Contributing
+
+The project currently uses GitHub Issues, Pull Requests, and Trello to organize development.
+
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the development and contribution workflow.
+
+## Documentation
+
+Additional documentation is available in [`docs/`](docs/).
+
+This includes information about:
+
+* Project architecture
+* Dataset and pipeline structure
+* Data contracts
+* Architectural decisions
+
+Higher-level project goals and scope are documented in the project wiki.
