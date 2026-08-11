@@ -1,0 +1,97 @@
+name: Bug report
+description: Report unexpected or incorrect behavior in the project.
+title: "[Bug]: "
+labels:
+  - bug
+
+body:
+  - type: markdown
+    attributes:
+      value: >-
+        Title this by the effect you saw, not the cause you suspect. The title is
+        what people search.
+
+  - type: textarea
+    id: expected_actual
+    attributes:
+      label: Expected and actual behavior
+      placeholder: |
+        Expected:
+
+        Actual:
+    validations:
+      required: false
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Start from a known state and include any input, configuration, or data needed.
+      placeholder: |
+        1. Describe the initial state or required setup.
+        2. Perform the action that leads to the issue.
+        3. Provide the relevant input or configuration.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: frequency
+    attributes:
+      label: How often does it happen when you follow those steps?
+      options:
+        - Every time
+        - Most times
+        - Occasionally
+        - Once, and not since
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      description: The effect on users, as you see it. We set priority separately.
+      options:
+        - S1 — Data loss, corruption, security exposure, or a core flow unusable with no workaround
+        - S2 — Core flow broken with an awkward workaround, or a non-core flow unusable
+        - S3 — Wrong behavior with a straightforward workaround
+        - S4 — Cosmetic, or wrong only in an unlikely path
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Stack trace or logs
+      description: The whole trace, not just the line you think matters. If there was none, say so.
+      render: text
+    validations:
+      required: false
+
+  - type: textarea
+    id: impact
+    attributes:
+      label: Who is affected, and is there a workaround?
+    validations:
+      required: false
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      placeholder: |
+        Project version or commit:
+        Last working / first broken version:
+        Operating system:
+        Python version:
+        Other (browser, device, hardware):
+    validations:
+      required: false
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Anything else
+      description: Screenshots, related issues, a failing test case.
+    validations:
+      required: false
