@@ -1,6 +1,7 @@
 # Dynamic Gesture Recognition Model
 
 Training pipeline for a dynamic hand-gesture recognition model using MediaPipe hand landmarks and a Transformer Encoder.
+
 The project processes gesture recordings into normalized landmark tensors that can later be used for model training and evaluation.
 
 ## Current Status
@@ -34,14 +35,14 @@ More detailed information about the pipeline, data contracts, and tensor shapes 
 * NumPy
 * PyTorch
 
-The complete dependency list is maintained in `pyproject.toml`.
+The complete dependency list is maintained in [`pyproject.toml`](pyproject.toml).
 
 ## Setup
 
 Clone the repository:
 
 ```bash
-git clone <repository-url>
+git clone git@github.com:alekszlat/Training-Dynamic-Gesture-Model.git
 cd Training-Dynamic-Gesture-Model
 ```
 
@@ -126,19 +127,21 @@ Pull requests are also checked through CI.
 
 ## Contributing
 
-The project currently uses GitHub Issues, Pull Requests, and Trello to organize development.
+The project uses GitHub Issues, Pull Requests, and Trello to organize development.
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the development and contribution workflow.
 
 ## Documentation
 
-Additional documentation is available in [`docs/`](docs/).
+Project documentation is split between technical documentation in the repository and higher-level project documentation in the GitHub Wiki.
 
-This includes information about:
+* [`docs/`](docs/) — architecture, dataset and pipeline structure, data contracts, and architectural decisions.
+* [GitHub Wiki](https://github.com/alekszlat/Training-Dynamic-Gesture-Model/wiki) — project vision, goals, scope, success criteria, and other high-level documentation.
 
-* Project architecture
-* Dataset and pipeline structure
-* Data contracts
-* Architectural decisions
+As the technical documentation is expanded, this section can link directly to individual documents for easier navigation.
 
-Higher-level project goals and scope are documented in the project wiki.
+## License
+
+No open-source license is currently applied.
+
+**All rights reserved; standard copyright applies.**
