@@ -1,8 +1,8 @@
-from src.gesture_transformer.datasets.readers.base_reader import FrameReader
-from src.gesture_transformer.datasets.readers.jester_frame_reader import (
+from gesture_transformer.datasets.readers.base_reader import FrameReader
+from gesture_transformer.datasets.readers.jester_frame_reader import (
     JesterFrameReader,
 )
-from src.gesture_transformer.datasets.readers.video_reader import VideoReader
+from gesture_transformer.datasets.readers.video_reader import VideoReader
 
 
 class ReaderFactory:

@@ -1,10 +1,10 @@
 from pathlib import Path
 
-from src.gesture_transformer.datasets.manifest.jester_manifest_builder import (
+from gesture_transformer.datasets.manifest.jester_manifest_builder import (
     JesterManifestBuilder,
 )
-from src.gesture_transformer.datasets.manifest.manifest_combiner import ManifestCombiner
-from src.gesture_transformer.datasets.manifest.recorded_manifest_builder import (
+from gesture_transformer.datasets.manifest.manifest_combiner import ManifestCombiner
+from gesture_transformer.datasets.manifest.recorded_manifest_builder import (
     RecordedManifestBuilder,
 )
 

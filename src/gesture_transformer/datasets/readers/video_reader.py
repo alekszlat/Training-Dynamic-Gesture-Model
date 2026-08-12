@@ -4,7 +4,7 @@ from pathlib import Path
 import cv2 as cv
 import numpy as np
 
-from src.gesture_transformer.datasets.readers.base_reader import Frame
+from gesture_transformer.datasets.readers.base_reader import Frame
 
 
 class VideoReader:

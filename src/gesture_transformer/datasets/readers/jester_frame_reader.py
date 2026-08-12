@@ -4,7 +4,7 @@ from typing import ClassVar
 
 import cv2 as cv
 
-from src.gesture_transformer.datasets.readers.base_reader import Frame
+from gesture_transformer.datasets.readers.base_reader import Frame
 
 
 class JesterFrameReader:

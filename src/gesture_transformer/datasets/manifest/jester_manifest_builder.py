@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import ClassVar
 
-from src.gesture_transformer.datasets.manifest.label_mapper import LabelMapper
+from gesture_transformer.datasets.manifest.label_mapper import LabelMapper
 
 
 @dataclass(frozen=True)

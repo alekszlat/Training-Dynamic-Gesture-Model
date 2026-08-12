@@ -1,21 +1,21 @@
 from pathlib import Path
 
-from src.gesture_transformer.datasets.landmark_extraction.landmark_extraction_pipeline import (
+from gesture_transformer.datasets.landmark_extraction.landmark_extraction_pipeline import (
     LandmarkExtractionPipeline,
 )
-from src.gesture_transformer.datasets.landmark_extraction.landmark_extractor import (
+from gesture_transformer.datasets.landmark_extraction.landmark_extractor import (
     LandmarkExtractor,
 )
-from src.gesture_transformer.datasets.landmark_extraction.landmark_saver import (
+from gesture_transformer.datasets.landmark_extraction.landmark_saver import (
     LandmarkSaver,
 )
-from src.gesture_transformer.datasets.landmark_extraction.metadata_writer import (
+from gesture_transformer.datasets.landmark_extraction.metadata_writer import (
     MetadataWriter,
 )
-from src.gesture_transformer.datasets.manifest.sample_manifest_reader import (
+from gesture_transformer.datasets.manifest.sample_manifest_reader import (
     SampleManifestReader,
 )
-from src.gesture_transformer.datasets.readers.reader_factory import ReaderFactory
+from gesture_transformer.datasets.readers.reader_factory import ReaderFactory
 
 if __name__ == "__main__":
     MANIFEST_PATH = Path("data/manifests/samples.csv")

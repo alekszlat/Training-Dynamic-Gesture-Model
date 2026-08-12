@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import ClassVar
 
-from src.gesture_transformer.datasets.manifest.label_mapper import LabelMapper
+from gesture_transformer.datasets.manifest.label_mapper import LabelMapper
 
 
 class RecordedManifestBuilder:

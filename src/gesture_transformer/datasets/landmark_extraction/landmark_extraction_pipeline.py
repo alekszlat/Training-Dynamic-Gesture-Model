@@ -11,11 +11,11 @@ from gesture_transformer.datasets.landmark_extraction.metadata_writer import (
     MetadataRecord,
     MetadataWriter,
 )
-from src.gesture_transformer.datasets.manifest.sample_manifest_reader import (
+from gesture_transformer.datasets.manifest.sample_manifest_reader import (
     SampleManifestReader,
 )
-from src.gesture_transformer.datasets.readers.base_reader import Frame
-from src.gesture_transformer.datasets.readers.reader_factory import ReaderFactory
+from gesture_transformer.datasets.readers.base_reader import Frame
+from gesture_transformer.datasets.readers.reader_factory import ReaderFactory
 
 
 class LandmarkExtractionPipeline:

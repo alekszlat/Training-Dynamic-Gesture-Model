@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from src.gesture_transformer.datasets.tensor_extraction.tensor_builder import (
+from gesture_transformer.datasets.tensor_extraction.tensor_builder import (
     TensorBuilder,
 )
 

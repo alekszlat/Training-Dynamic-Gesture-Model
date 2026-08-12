@@ -1,6 +1,6 @@
 import csv
 
-from src.gesture_transformer.datasets.landmark_extraction.metadata_writer import (
+from gesture_transformer.datasets.landmark_extraction.metadata_writer import (
     MetadataRecord,
 )
 
