@@ -12,7 +12,7 @@ jobs:
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
-      - run: uv sync --dev
+      - run: uv sync --frozen
       - uses: actions/cache@v4
         with:
           path: ~/.cache/pre-commit
@@ -26,5 +26,5 @@ jobs:
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
-      - run: uv sync --dev
+      - run: uv sync --frozen
       - run: uv run pytest -q
