@@ -102,7 +102,7 @@ class ManifestCombiner:
         """Print a summary of the combined manifest."""
 
         total_samples = len(manifest)
-        label_counts = {}
+        label_counts: dict[str, int] = {}
 
         for row in manifest:
             label = row.get("label")
