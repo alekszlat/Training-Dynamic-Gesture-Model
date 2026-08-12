@@ -29,7 +29,7 @@ class VideoReader:
                     break
 
                 if not isinstance(frame, np.ndarray):
-                    raise ValueError(f"Invalid frame type: {type(frame)}")
+                    raise TypeError(f"Invalid frame type: {type(frame)}")
 
                 yield frame
         finally:

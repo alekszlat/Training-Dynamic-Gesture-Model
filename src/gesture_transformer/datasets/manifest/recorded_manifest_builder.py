@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import ClassVar
 
 from src.gesture_transformer.datasets.manifest.label_mapper import LabelMapper
 
@@ -6,7 +7,7 @@ from src.gesture_transformer.datasets.manifest.label_mapper import LabelMapper
 class RecordedManifestBuilder:
     """Build manifest rows for personally recorded gesture videos."""
 
-    VALID_VIDEO_EXTENSIONS = {".mp4", ".avi", ".mov", ".mkv"}
+    VALID_VIDEO_EXTENSIONS: ClassVar[set[str]] = {".mp4", ".avi", ".mov", ".mkv"}
 
     def __init__(
         self,

@@ -1,5 +1,6 @@
 from collections.abc import Iterator
 from pathlib import Path
+from typing import ClassVar
 
 import cv2 as cv
 
@@ -9,7 +10,7 @@ from src.gesture_transformer.datasets.readers.base_reader import Frame
 class JesterFrameReader:
     """Reads frames from a Jester sample folder."""
 
-    VALID_EXTENSIONS = {".jpg", ".jpeg", ".png"}
+    VALID_EXTENSIONS: ClassVar[set[str]] = {".jpg", ".jpeg", ".png"}
 
     def read_frames(self, path: Path) -> Iterator[Frame]:
         if not path.exists():

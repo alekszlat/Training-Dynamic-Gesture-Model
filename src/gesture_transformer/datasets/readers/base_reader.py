@@ -1,10 +1,10 @@
 from collections.abc import Iterator
 from pathlib import Path
-from typing import Protocol, TypeAlias
+from typing import Protocol
 
 import numpy as np
 
-Frame: TypeAlias = np.ndarray
+type Frame = np.ndarray
 
 
 class FrameReader(Protocol):

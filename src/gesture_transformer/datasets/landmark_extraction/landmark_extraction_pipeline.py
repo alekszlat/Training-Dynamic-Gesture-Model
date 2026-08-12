@@ -58,7 +58,7 @@ class LandmarkExtractionPipeline:
                         f"rate={record.detection_rate}"
                     )
 
-                except Exception as error:
+                except Exception as error:  # noqa: BLE001 - keep pipeline running past per-sample failures
                     records.append(
                         MetadataRecord(
                             sample_id=sample.sample_id,
