@@ -1,0 +1,59 @@
+# .pre-commit-config.yaml
+default_install_hook_types: [pre-commit, pre-push]
+default_stages: [pre-commit]        # without this, every hook fires at every stage
+minimum_pre_commit_version: "4.0.0"
+
+exclude: |
+  (?x)^(
+    data/.*|
+    .*\.ipynb_checkpoints/.*
+  )$
+
+repos:
+  # STAGED FILES ONLY
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace     # strip trailing spaces except in .md
+        args: [--markdown-linebreak-ext=md]
+      - id: end-of-file-fixer       # 1 newline at EOF
+      - id: mixed-line-ending       # force LF, so a Windows collaborator can't rewrite whole files
+        args: [--fix=lf]
+      - id: check-merge-conflict    # block committing <<<<<<< markers
+      - id: check-case-conflict
+      - id: check-added-large-files # block accidental model weights / datasets (README.md)
+        args: [--maxkb=1000]
+      - id: detect-private-key      # block committed SSH/PEM private keys
+      - id: check-yaml              # validate formatting
+      - id: check-toml
+      - id: debug-statements        # block stray breakpoint() / pdb.set_trace()
+      - id: no-commit-to-branch     # keep work on branches, off main
+        args: [--branch, main]
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.16.2
+    hooks:
+      - id: ruff-check              # lint, autofix, import sort
+        args: [--fix]
+      - id: ruff-format             # format
+
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: "v8.30.0"
+    hooks:
+      - id: gitleaks                # scan the staged diff for API keys, tokens, credentials
+
+  - repo: meta
+    hooks:
+      - id: check-hooks-apply       # warns when a hook above matches zero files in the repo
+      - id: check-useless-excludes  # warns when an exclude pattern above is dead
+
+  # PRE-PUSH
+  - repo: local
+    hooks:
+      - id: pytest-fast
+        name: pytest                # last gate before the branch leaves your machine
+        entry: uv run pytest -q -x
+        language: system
+        types: [python]             # only trigger when Python actually changed
+        pass_filenames: false       # pytest chooses its own targets
+        stages: [pre-push]
