@@ -15,7 +15,7 @@ if __name__ == "__main__":
         "swiping_left",
         "swiping_right",
         "swiping_up",
-        "click"
+        "click",
     ]
 
     builder = TensorBuilder(

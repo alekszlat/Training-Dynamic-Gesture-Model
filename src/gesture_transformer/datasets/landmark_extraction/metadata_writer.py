@@ -1,9 +1,11 @@
 from dataclasses import dataclass
 from pathlib import Path
 
+
 @dataclass
 class MetadataRecord:
     """Represents a single record in the metadata manifest."""
+
     sample_id: str
     source_type: str
     source_name: str
@@ -17,6 +19,7 @@ class MetadataRecord:
     landmark_path: str
     error: str
 
+
 class MetadataWriter:
     """
     Writes metadata records to a CSV file.
@@ -26,8 +29,12 @@ class MetadataWriter:
         self.output_path = output_path
 
     def write(self, records: list[MetadataRecord]):
-        with open(self.output_path, 'w') as f:
+        with open(self.output_path, "w") as f:
             # Write header
-            f.write("sample_id,source_type,source_name,label,raw_label,path,total_frames,detected_frames,detection_rate,status,landmark_path,error\n")
-            for record in records:
-                f.write(f"{record.sample_id},{record.source_type},{record.source_name},{record.label},{record.raw_label},{record.path},{record.total_frames},{record.detected_frames},{record.detection_rate:.2f},{record.status},{record.landmark_path},{record.error}\n")
+            f.write(
+                "sample_id,source_type,source_name,label,raw_label,path,total_frames,detected_frames,detection_rate,status,landmark_path,error\n"
+            )
+            f.writelines(
+                f"{record.sample_id},{record.source_type},{record.source_name},{record.label},{record.raw_label},{record.path},{record.total_frames},{record.detected_frames},{record.detection_rate:.2f},{record.status},{record.landmark_path},{record.error}\n"
+                for record in records
+            )

@@ -2,6 +2,7 @@ from pathlib import Path
 
 import numpy as np
 
+
 class LandmarkSaver:
     """Saves extracted landmark arrays to .npy files."""
 

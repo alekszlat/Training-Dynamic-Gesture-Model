@@ -4,12 +4,10 @@ class LabelEncoder:
 
         self.labels = unique_labels
         self.label_to_index = {
-            label: index
-            for index, label in enumerate(unique_labels)
+            label: index for index, label in enumerate(unique_labels)
         }
         self.index_to_label = {
-            index: label
-            for label, index in self.label_to_index.items()
+            index: label for label, index in self.label_to_index.items()
         }
 
     def encode(self, label: str) -> int:

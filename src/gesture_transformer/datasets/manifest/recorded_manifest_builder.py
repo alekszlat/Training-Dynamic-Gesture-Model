@@ -1,5 +1,7 @@
 from pathlib import Path
+
 from src.gesture_transformer.datasets.manifest.label_mapper import LabelMapper
+
 
 class RecordedManifestBuilder:
     """Build manifest rows for personally recorded gesture videos."""

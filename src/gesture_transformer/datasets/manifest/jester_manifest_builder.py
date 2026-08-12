@@ -20,6 +20,7 @@ SUPPORTED_JESTER_LABELS = {
     "Doing Other Things",
 }
 
+
 class JesterManifestBuilder:
     """Build manifest rows for Jester gesture frame folders."""
 

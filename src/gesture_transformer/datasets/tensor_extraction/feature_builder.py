@@ -34,10 +34,14 @@ class FeatureBuilder:
         """Check that the input shapes are correct."""
 
         if landmarks.ndim != 3:
-            raise ValueError(f"Expected landmarks to have 3 dimensions, got {landmarks.shape}")
+            raise ValueError(
+                f"Expected landmarks to have 3 dimensions, got {landmarks.shape}"
+            )
 
         if landmarks.shape[1:] != (21, 3):
-            raise ValueError(f"Expected landmarks shape [T, 21, 3], got {landmarks.shape}")
+            raise ValueError(
+                f"Expected landmarks shape [T, 21, 3], got {landmarks.shape}"
+            )
 
         if mask.ndim != 1:
             raise ValueError(f"Expected mask shape [T], got {mask.shape}")

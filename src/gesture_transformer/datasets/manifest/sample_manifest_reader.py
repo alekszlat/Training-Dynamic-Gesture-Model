@@ -1,12 +1,12 @@
 import csv
 from dataclasses import dataclass
 from pathlib import Path
-from pathlib import Path
 
 
 @dataclass
 class SampleRecord:
     """Represents a single record in the sample manifest."""
+
     sample_id: str
     source_type: str
     source_name: str
@@ -15,9 +15,10 @@ class SampleRecord:
     raw_label: str
     path: Path
 
+
 class SampleManifestReader:
     """
-    Reads and parses a sample manifest CSV file. 
+    Reads and parses a sample manifest CSV file.
     Main role is to read the manifest and return a list of SampleRecord objects.
     """
 
@@ -26,7 +27,7 @@ class SampleManifestReader:
 
     def read_manifest(self):
         records = []
-        with open(self.manifest_path, 'r', encoding="utf-8", newline="") as file:
+        with open(self.manifest_path, "r", encoding="utf-8", newline="") as file:
             reader = csv.DictReader(file)
 
             for row in reader:

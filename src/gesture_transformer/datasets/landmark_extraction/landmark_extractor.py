@@ -10,7 +10,6 @@ import numpy as np
 
 from gesture_transformer.datasets.readers.base_reader import Frame
 
-
 BaseOptions = mp.tasks.BaseOptions
 HandLandmarker = mp.tasks.vision.HandLandmarker
 HandLandmarkerOptions = mp.tasks.vision.HandLandmarkerOptions
@@ -109,10 +108,7 @@ class LandmarkExtractor:
         hand_landmarks = result.hand_landmarks[0]
 
         landmarks = np.array(
-            [
-                [landmark.x, landmark.y, landmark.z]
-                for landmark in hand_landmarks
-            ],
+            [[landmark.x, landmark.y, landmark.z] for landmark in hand_landmarks],
             dtype=np.float32,
         )
 

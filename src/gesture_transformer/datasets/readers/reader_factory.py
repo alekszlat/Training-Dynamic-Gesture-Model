@@ -1,6 +1,9 @@
-from src.gesture_transformer.datasets.readers.jester_frame_reader import JesterFrameReader
-from src.gesture_transformer.datasets.readers.video_reader import VideoReader
 from src.gesture_transformer.datasets.readers.base_reader import FrameReader
+from src.gesture_transformer.datasets.readers.jester_frame_reader import (
+    JesterFrameReader,
+)
+from src.gesture_transformer.datasets.readers.video_reader import VideoReader
+
 
 class ReaderFactory:
     """Factory class to create frame readers based on the data source type."""
@@ -13,7 +16,7 @@ class ReaderFactory:
 
     def get_reader(self, source_type: str) -> FrameReader:
         """Return a frame reader instance based on the source type."""
-       
+
         try:
             return self._readers[source_type]
         except KeyError:

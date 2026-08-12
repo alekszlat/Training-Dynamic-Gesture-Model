@@ -1,11 +1,14 @@
-from src.gesture_transformer.datasets.manifest.recorded_manifest_builder import RecordedManifestBuilder
-from src.gesture_transformer.datasets.manifest.jester_manifest_builder import JesterManifestBuilder
-from src.gesture_transformer.datasets.manifest.manifest_combiner import ManifestCombiner
 from pathlib import Path
-    
+
+from src.gesture_transformer.datasets.manifest.jester_manifest_builder import (
+    JesterManifestBuilder,
+)
+from src.gesture_transformer.datasets.manifest.manifest_combiner import ManifestCombiner
+from src.gesture_transformer.datasets.manifest.recorded_manifest_builder import (
+    RecordedManifestBuilder,
+)
 
 if __name__ == "__main__":
-
     samples_dir = Path("data/raw/recorded")
     builder = RecordedManifestBuilder(samples_dir)
     recorded_manifest = builder.build()
