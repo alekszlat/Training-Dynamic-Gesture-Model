@@ -3,7 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from random import Random
 
-from src.gesture_transformer.datasets.landmark_extraction.metadata_writer import MetadataRecord
+from gesture_transformer.datasets.landmark_extraction.metadata_writer import (
+    MetadataRecord,
+)
 
 
 @dataclass

@@ -1,16 +1,16 @@
 from collections.abc import Iterator
 from pathlib import Path
-from typing import cast
+from typing import ClassVar
 
 import cv2 as cv
 
-from src.gesture_transformer.datasets.readers.base_reader import Frame
+from gesture_transformer.datasets.readers.base_reader import Frame
 
 
 class JesterFrameReader:
     """Reads frames from a Jester sample folder."""
 
-    VALID_EXTENSIONS = {".jpg", ".jpeg", ".png"}
+    VALID_EXTENSIONS: ClassVar[set[str]] = {".jpg", ".jpeg", ".png"}
 
     def read_frames(self, path: Path) -> Iterator[Frame]:
         if not path.exists():
@@ -31,7 +31,7 @@ class JesterFrameReader:
                 raise RuntimeError(f"Could not read frame image: {frame_path}")
 
             yield frame
-            
+
     def _get_sorted_frame_paths(self, folder: Path) -> list[Path]:
         """
         Collect all valid frame image paths from a Jester sample folder
@@ -52,15 +52,13 @@ class JesterFrameReader:
         frame_paths = [
             file_path
             for file_path in folder.iterdir()
-            if file_path.is_file()
-            and file_path.suffix.lower() in self.VALID_EXTENSIONS
+            if file_path.is_file() and file_path.suffix.lower() in self.VALID_EXTENSIONS
         ]
 
         # Sort the frames using the numeric part of the filename.
         # This prevents incorrect ordering such as:
         # 00001.jpg, 00010.jpg, 00002.jpg
         return sorted(frame_paths, key=self._frame_sort_key)
-
 
     def _frame_sort_key(self, path: Path) -> int:
         """

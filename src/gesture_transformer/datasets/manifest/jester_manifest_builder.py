@@ -1,7 +1,8 @@
 from dataclasses import dataclass
 from pathlib import Path
+from typing import ClassVar
 
-from src.gesture_transformer.datasets.manifest.label_mapper import LabelMapper
+from gesture_transformer.datasets.manifest.label_mapper import LabelMapper
 
 
 @dataclass(frozen=True)
@@ -20,10 +21,11 @@ SUPPORTED_JESTER_LABELS = {
     "Doing Other Things",
 }
 
+
 class JesterManifestBuilder:
     """Build manifest rows for Jester gesture frame folders."""
 
-    VALID_FRAME_EXTENSIONS = {".jpg", ".jpeg", ".png"}
+    VALID_FRAME_EXTENSIONS: ClassVar[set[str]] = {".jpg", ".jpeg", ".png"}
 
     ANNOTATION_FILE = "jester-v1-train.csv"
 

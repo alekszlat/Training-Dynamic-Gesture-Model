@@ -1,19 +1,21 @@
-from typing import Iterable
+from collections.abc import Iterable
 
 from gesture_transformer.datasets.landmark_extraction.landmark_extractor import (
-    LandmarkExtractor,
     LandmarkExtractionResult,
+    LandmarkExtractor,
 )
-from gesture_transformer.datasets.landmark_extraction.landmark_saver import LandmarkSaver
+from gesture_transformer.datasets.landmark_extraction.landmark_saver import (
+    LandmarkSaver,
+)
 from gesture_transformer.datasets.landmark_extraction.metadata_writer import (
-    MetadataWriter,
     MetadataRecord,
+    MetadataWriter,
 )
-from src.gesture_transformer.datasets.manifest.sample_manifest_reader import (
+from gesture_transformer.datasets.manifest.sample_manifest_reader import (
     SampleManifestReader,
 )
-from src.gesture_transformer.datasets.readers.reader_factory import ReaderFactory
-from src.gesture_transformer.datasets.readers.base_reader import Frame
+from gesture_transformer.datasets.readers.base_reader import Frame
+from gesture_transformer.datasets.readers.reader_factory import ReaderFactory
 
 
 class LandmarkExtractionPipeline:
@@ -56,7 +58,7 @@ class LandmarkExtractionPipeline:
                         f"rate={record.detection_rate}"
                     )
 
-                except Exception as error:
+                except Exception as error:  # noqa: BLE001 - keep pipeline running past per-sample failures
                     records.append(
                         MetadataRecord(
                             sample_id=sample.sample_id,
@@ -88,7 +90,9 @@ class LandmarkExtractionPipeline:
         reader = self.reader_factory.get_reader(sample.source_type)
         frames: Iterable[Frame] = reader.read_frames(sample.path)
 
-        extraction_result: LandmarkExtractionResult = self.landmark_extractor.extract(frames)
+        extraction_result: LandmarkExtractionResult = self.landmark_extractor.extract(
+            frames
+        )
 
         detection_rate = self._calculate_detection_rate(
             total_frames=extraction_result.total_frames,

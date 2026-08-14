@@ -1,9 +1,11 @@
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Iterator, Protocol, TypeAlias
+from typing import Protocol
 
 import numpy as np
 
-Frame: TypeAlias = np.ndarray
+type Frame = np.ndarray
+
 
 class FrameReader(Protocol):
     """A protocol for reading frames from a data source."""

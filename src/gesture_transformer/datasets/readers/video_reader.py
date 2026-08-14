@@ -1,15 +1,16 @@
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Iterator, cast
 
 import cv2 as cv
 import numpy as np
 
-from src.gesture_transformer.datasets.readers.base_reader import Frame
+from gesture_transformer.datasets.readers.base_reader import Frame
+
 
 class VideoReader:
     """Reader that reads frames from a video file."""
 
-    def read_frames(self,path: Path) -> Iterator[Frame]:
+    def read_frames(self, path: Path) -> Iterator[Frame]:
         """Read frames from the given video file path."""
 
         if not path.exists() or not path.is_file():
@@ -23,14 +24,13 @@ class VideoReader:
         try:
             while True:
                 ret, frame = cap.read()
-                
+
                 if not ret:
                     break
-                
+
                 if not isinstance(frame, np.ndarray):
-                    raise ValueError(f"Invalid frame type: {type(frame)}")
-                
+                    raise TypeError(f"Invalid frame type: {type(frame)}")
+
                 yield frame
         finally:
             cap.release()
-

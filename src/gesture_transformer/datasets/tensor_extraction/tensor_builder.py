@@ -3,17 +3,23 @@ from pathlib import Path
 import numpy as np
 import torch
 
-from src.gesture_transformer.datasets.tensor_extraction.temporal_normalizer import (
-    TemporalNormalizer,
-)
-from src.gesture_transformer.datasets.tensor_extraction.splitter import Splitter
-from src.gesture_transformer.datasets.tensor_extraction.label_encoder import LabelEncoder
-from src.gesture_transformer.datasets.tensor_extraction.feature_builder import FeatureBuilder
-from src.gesture_transformer.datasets.tensor_extraction.metadata_reader import MetadataReader
-from src.gesture_transformer.datasets.tensor_extraction.tensor_saver import TensorSaver
-from src.gesture_transformer.datasets.landmark_extraction.metadata_writer import (
+from gesture_transformer.datasets.landmark_extraction.metadata_writer import (
     MetadataRecord,
 )
+from gesture_transformer.datasets.tensor_extraction.feature_builder import (
+    FeatureBuilder,
+)
+from gesture_transformer.datasets.tensor_extraction.label_encoder import (
+    LabelEncoder,
+)
+from gesture_transformer.datasets.tensor_extraction.metadata_reader import (
+    MetadataReader,
+)
+from gesture_transformer.datasets.tensor_extraction.splitter import Splitter
+from gesture_transformer.datasets.tensor_extraction.temporal_normalizer import (
+    TemporalNormalizer,
+)
+from gesture_transformer.datasets.tensor_extraction.tensor_saver import TensorSaver
 
 
 class TensorBuilder:
@@ -70,9 +76,7 @@ class TensorBuilder:
         )
 
         # 6. Save label mapping
-        self.tensor_saver.save_label_mapping(
-            self.label_encoder.mapping()
-        )
+        self.tensor_saver.save_label_mapping(self.label_encoder.mapping())
 
         print("Tensor building finished.")
 
@@ -127,7 +131,3 @@ class TensorBuilder:
             "sample_ids": sample_ids,
             "labels": labels,
         }
-
-
-
-

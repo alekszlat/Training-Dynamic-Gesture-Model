@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from src.gesture_transformer.datasets.tensor_extraction.tensor_builder import (
+from gesture_transformer.datasets.tensor_extraction.tensor_builder import (
     TensorBuilder,
 )
 
@@ -15,7 +15,7 @@ if __name__ == "__main__":
         "swiping_left",
         "swiping_right",
         "swiping_up",
-        "click"
+        "click",
     ]
 
     builder = TensorBuilder(

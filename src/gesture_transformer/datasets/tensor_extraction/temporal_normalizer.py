@@ -1,5 +1,6 @@
-import numpy as np
 from dataclasses import dataclass
+
+import numpy as np
 
 
 @dataclass
@@ -65,4 +66,3 @@ class TemporalNormalizer:
             mask[:original_length] = 1.0
 
         return NormalizedData(norm_sequence=norm_sequence, mask=mask)
-

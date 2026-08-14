@@ -1,16 +1,23 @@
-from src.gesture_transformer.datasets.landmark_extraction.landmark_extractor import LandmarkExtractor
-from src.gesture_transformer.datasets.landmark_extraction.landmark_saver import LandmarkSaver
-from src.gesture_transformer.datasets.landmark_extraction.metadata_writer import MetadataWriter
-from src.gesture_transformer.datasets.manifest.sample_manifest_reader import (
-    SampleManifestReader,
-)
-from src.gesture_transformer.datasets.readers.reader_factory import ReaderFactory
-
-from src.gesture_transformer.datasets.landmark_extraction.landmark_extraction_pipeline import LandmarkExtractionPipeline
 from pathlib import Path
 
-if __name__ == "__main__":
+from gesture_transformer.datasets.landmark_extraction.landmark_extraction_pipeline import (
+    LandmarkExtractionPipeline,
+)
+from gesture_transformer.datasets.landmark_extraction.landmark_extractor import (
+    LandmarkExtractor,
+)
+from gesture_transformer.datasets.landmark_extraction.landmark_saver import (
+    LandmarkSaver,
+)
+from gesture_transformer.datasets.landmark_extraction.metadata_writer import (
+    MetadataWriter,
+)
+from gesture_transformer.datasets.manifest.sample_manifest_reader import (
+    SampleManifestReader,
+)
+from gesture_transformer.datasets.readers.reader_factory import ReaderFactory
 
+if __name__ == "__main__":
     MANIFEST_PATH = Path("data/manifests/samples.csv")
     MODEL_PATH = Path("src/gesture_transformer/models/hand_landmarker.task")
     LANDMARK_OUTPUT_DIR = Path("data/interim/landmarks")

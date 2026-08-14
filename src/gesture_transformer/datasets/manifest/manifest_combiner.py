@@ -1,5 +1,5 @@
-from pathlib import Path
 import csv
+from pathlib import Path
 
 SUPPORTED_LABELS = {
     "swiping_left",
@@ -10,10 +10,13 @@ SUPPORTED_LABELS = {
     "click",
 }
 
+
 class ManifestCombiner:
     """Combine both the recorded and jester lists[dict] into single one and saves it into a csv file."""
 
-    def __init__(self, recorded_list: list[dict], jester_list: list[dict], output_path: Path):
+    def __init__(
+        self, recorded_list: list[dict], jester_list: list[dict], output_path: Path
+    ):
         self.recorded_list = recorded_list
         self.jester_list = jester_list
         self.output_path = output_path
@@ -30,11 +33,11 @@ class ManifestCombiner:
                 validated_manifest.append(row)
             else:
                 print(f"Warning: Invalid manifest row skipped: {row}")
-                return False # Return False if any invalid row is found
-        
+                return False  # Return False if any invalid row is found
+
         self.save_to_csv(validated_manifest)
         self.print_manifest_summary(validated_manifest)
-        
+
         return True
 
     def _validate_combined_manifest_row(self, row: dict) -> bool:
@@ -68,7 +71,6 @@ class ManifestCombiner:
 
         return True
 
-
     def save_to_csv(self, manifest: list[dict[str, str]]) -> None:
         """Save the combined manifest to a CSV file."""
 
@@ -100,7 +102,7 @@ class ManifestCombiner:
         """Print a summary of the combined manifest."""
 
         total_samples = len(manifest)
-        label_counts = {}
+        label_counts: dict[str, int] = {}
 
         for row in manifest:
             label = row.get("label")

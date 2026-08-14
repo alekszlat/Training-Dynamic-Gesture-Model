@@ -1,8 +1,15 @@
+import sys
+
+from packaging.version import Version
+
+
 def test_python_version():
-    import sys
-    assert sys.version_info.major >= 3, "Python version must be 3 or higher"
-    assert sys.version_info.minor >= 10, "Python version must be 3.10 or higher"
+    assert sys.version_info >= (3, 10), "Python 3.10 or higher required"
+
 
 def test_torch_import():
     import torch
-    assert torch.__version__ >= "2.0.0", "PyTorch version must be 2.0.0 or higher"
+
+    assert Version(torch.__version__) >= Version("2.0.0"), (
+        f"PyTorch 2.0.0 or higher required, got {torch.__version__}"
+    )
