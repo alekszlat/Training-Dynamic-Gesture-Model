@@ -38,7 +38,7 @@ outputs/*
 # Agent files
 .agents/
 AGENTS.md
-docs/
+paper/
 
 #Personal notes
 notebooks/
