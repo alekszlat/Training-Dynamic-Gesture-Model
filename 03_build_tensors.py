@@ -1,22 +1,17 @@
 from pathlib import Path
 
+from gesture_transformer.datasets.manifest.manifest_combiner import SUPPORTED_LABELS
 from gesture_transformer.datasets.tensor_extraction.tensor_builder import (
     TensorBuilder,
 )
+
+LABEL_LIST = sorted(SUPPORTED_LABELS)
 
 if __name__ == "__main__":
     PROJECT_ROOT = Path(__file__).resolve().parent
 
     METADATA_PATH = PROJECT_ROOT / "data" / "processed" / "metadata.csv"
     PROCESSED_DIR = PROJECT_ROOT / "data" / "processed"
-
-    LABEL_LIST = [
-        "swiping_down",
-        "swiping_left",
-        "swiping_right",
-        "swiping_up",
-        "click",
-    ]
 
     builder = TensorBuilder(
         metadata_path=METADATA_PATH,

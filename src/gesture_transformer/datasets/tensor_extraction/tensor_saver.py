@@ -38,7 +38,7 @@ class TensorSaver:
         Save label-to-index mapping as JSON.
 
         Args:
-            mapping: Example {"swipe_left": 0, "swipe_right": 1}
+            mapping: Example {"swiping_left": 0, "swiping_right": 1}
             filename: Output JSON filename
 
         Returns:
