@@ -25,12 +25,12 @@ class RecordedManifestBuilder:
         Expected folder structure:
 
             data/raw/recorded/
-              swipe_up/
+              swiping_up/
                 001.mp4
                 002.mp4
-              swipe_down/
-              swipe_left/
-              swipe_right/
+              swiping_down/
+              swiping_left/
+              swiping_right/
               click/
 
         Returns:

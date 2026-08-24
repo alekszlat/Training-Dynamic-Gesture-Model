@@ -1,3 +1,4 @@
+import csv
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -29,12 +30,26 @@ class MetadataWriter:
         self.output_path = output_path
 
     def write(self, records: list[MetadataRecord]):
-        with open(self.output_path, "w") as f:
-            # Write header
-            f.write(
-                "sample_id,source_type,source_name,label,raw_label,path,total_frames,detected_frames,detection_rate,status,landmark_path,error\n"
-            )
-            f.writelines(
-                f"{record.sample_id},{record.source_type},{record.source_name},{record.label},{record.raw_label},{record.path},{record.total_frames},{record.detected_frames},{record.detection_rate:.2f},{record.status},{record.landmark_path},{record.error}\n"
-                for record in records
-            )
+        fieldnames = [
+            "sample_id",
+            "source_type",
+            "source_name",
+            "label",
+            "raw_label",
+            "path",
+            "total_frames",
+            "detected_frames",
+            "detection_rate",
+            "status",
+            "landmark_path",
+            "error",
+        ]
+
+        with open(self.output_path, "w", encoding="utf-8", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer.writeheader()
+
+            for record in records:
+                row = {name: getattr(record, name) for name in fieldnames}
+                row["detection_rate"] = f"{record.detection_rate:.2f}"
+                writer.writerow(row)

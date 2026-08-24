@@ -31,10 +31,10 @@ Outside the project are the user interface, live camera handling, MediaPipe itse
 
 Current supported gesture classes are:
 
-- `swipe_up`
-- `swipe_down`
-- `swipe_left`
-- `swipe_right`
+- `swiping_up`
+- `swiping_down`
+- `swiping_left`
+- `swiping_right`
 - `click`
 
 ---
