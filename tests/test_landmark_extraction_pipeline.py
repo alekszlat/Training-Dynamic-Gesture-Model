@@ -18,6 +18,7 @@ from gesture_transformer.datasets.landmark_extraction.landmark_extraction_pipeli
 )
 from gesture_transformer.datasets.landmark_extraction.landmark_extractor import (
     LandmarkExtractionResult,
+    LandmarkExtractor,
 )
 from gesture_transformer.datasets.landmark_extraction.landmark_saver import (
     LandmarkSaver,
@@ -25,10 +26,16 @@ from gesture_transformer.datasets.landmark_extraction.landmark_saver import (
 from gesture_transformer.datasets.landmark_extraction.metadata_writer import (
     MetadataWriter,
 )
-from gesture_transformer.datasets.manifest.sample_manifest_reader import SampleRecord
+from gesture_transformer.datasets.manifest.sample_manifest_reader import (
+    SampleManifestReader,
+    SampleRecord,
+)
+from gesture_transformer.datasets.readers.reader_factory import (
+    ReaderFactory,
+)
 
 
-class FakeManifestReader:
+class FakeManifestReader(SampleManifestReader):
     """Stands in for SampleManifestReader by returning a fixed list of samples."""
 
     def __init__(self, samples):
@@ -43,7 +50,7 @@ class FakeFrameReader:
     """Stands in for a frame reader, either yielding fixed frames or raising an error."""
 
     def __init__(self, frames=None, error=None):
-        self._frames = frames
+        self._frames = frames if frames is not None else []
         self._error = error
 
     def read_frames(self, path):
@@ -53,7 +60,7 @@ class FakeFrameReader:
         return iter(self._frames)
 
 
-class FakeReaderFactory:
+class FakeReaderFactory(ReaderFactory):
     """Stands in for ReaderFactory by mapping source types to fake frame readers."""
 
     def __init__(self, readers_by_source_type):
@@ -64,7 +71,7 @@ class FakeReaderFactory:
         return self._readers_by_source_type[source_type]
 
 
-class FakeLandmarkExtractor:
+class FakeLandmarkExtractor(LandmarkExtractor):
     """Stands in for LandmarkExtractor so tests don't depend on the real mediapipe model."""
 
     def __init__(self):
@@ -86,7 +93,7 @@ class FakeLandmarkExtractor:
         self.closed = True
 
 
-def test_pipeline_writes_metadata_and_survives_per_sample_failures(tmp_path):
+def test_pipeline_writes_metadata_and_survives_per_sample_failures(tmp_path: Path):
     """Run the pipeline over a successful and a failing sample and verify the metadata output."""
     good_sample = SampleRecord(
         sample_id="sample_good",
