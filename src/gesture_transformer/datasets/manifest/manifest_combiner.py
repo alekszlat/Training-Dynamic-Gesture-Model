@@ -28,48 +28,51 @@ class ManifestCombiner:
 
         # Validate combined manifest rows
         validated_manifest = []
+        invalid_rows = []
         for row in combined_manifest:
-            if self._validate_combined_manifest_row(row):
+            check, message = self._validate_combined_manifest_row(row)
+
+            if check:
                 validated_manifest.append(row)
             else:
-                print(f"Warning: Invalid manifest row skipped: {row}")
-                return False  # Return False if any invalid row is found
+                invalid_rows.append((row, message))
+
+        if invalid_rows:
+            print(
+                f"Warning: {len(invalid_rows)} invalid rows found in the combined manifest."
+            )
+            for invalid_row, message in invalid_rows:
+                print(f"Invalid row: {invalid_row} - {message}")
+            return False
 
         self.save_to_csv(validated_manifest)
         self.print_manifest_summary(validated_manifest)
 
         return True
 
-    def _validate_combined_manifest_row(self, row: dict) -> bool:
+    def _validate_combined_manifest_row(self, row: dict) -> tuple[bool, str]:
         if "sample_id" not in row or not row["sample_id"]:
-            print("Invalid row: missing sample_id")
-            return False
+            return False, "missing sample_id"
 
         if "label" not in row or not row["label"]:
-            print("Invalid row: missing label")
-            return False
+            return False, "missing label"
 
         if row["label"] not in SUPPORTED_LABELS:
-            print(f"Invalid row: unsupported label {row['label']}")
-            return False
+            return False, "unsupported label"
 
         if "path" not in row or not row["path"]:
-            print("Invalid row: missing path")
-            return False
+            return False, "missing path"
 
         if not Path(row["path"]).exists():
-            print(f"Invalid row: path does not exist: {row['path']}")
-            return False
+            return False, "path does not exist"
 
         if "source_type" not in row:
-            print("Invalid row: missing source_type")
-            return False
+            return False, "missing source_type"
 
         if row["source_type"] not in ["video", "jester"]:
-            print(f"Invalid row: invalid source_type {row['source_type']}")
-            return False
+            return False, "invalid source_type"
 
-        return True
+        return True, "valid row"
 
     def save_to_csv(self, manifest: list[dict[str, str]]) -> None:
         """Save the combined manifest to a CSV file."""
