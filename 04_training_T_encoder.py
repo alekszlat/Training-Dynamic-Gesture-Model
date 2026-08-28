@@ -9,107 +9,48 @@ from src.gesture_transformer.training.gesture_dataset import (
     GestureDataset,
     GestureDatasetLoader,
 )
+from src.gesture_transformer.training.transformer_en_trainer import Trainer
+
+# Path and filename for saving the best model
+SAVE_DIR = Path("src/gesture_transformer/models/checkpoints")
+BEST_MODEL_NAME_SAVE = "best_model.pth"
+
+# Device for computaion
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+# Gesture dataset loader config
+PROCESSED_DIR = Path("data/processed")
+TRAIN_FILE = "train.pt"
+VAL_FILE = "val.pt"
+
+# DataLoader config
+NUM_WORKERS = 0
 
 
-def train_one_epoch(
-    model: nn.Module,
-    data_loader: torch.utils.data.DataLoader,
-    optimizer: torch.optim.Optimizer,
-    criterion: torch.nn.Module,
-    device: torch.device,
-) -> tuple[float, float]:
+# Trainer config
+NUM_EPOCHS = 15
 
-    # Set the model to training mode
-    model.train()
+# Optimizer config
+LEARNING_RATE = 5e-4
 
-    # Initialize variables to track loss and accuracy
-    total_loss = 0.0
-    total_correct = 0
-    total_samples = 0
-
-    # Iterate through the data loader
-    for batch in data_loader:
-        # Extract features, padding mask, and answers from the batch
-        features = batch["features"].to(device)
-        padding_mask = batch["padding_mask"].to(device)
-        answers = batch["answers"].to(device)
-
-        # Zero the gradients of the optimizer
-        optimizer.zero_grad()
-
-        # Forward pass through the model
-        logits = model(features, padding_mask)
-
-        # Compute the loss using the criterion
-        loss = criterion(logits, answers)
-
-        # Backward pass and optimization step
-        loss.backward()
-        optimizer.step()
-
-        # Update total loss and accuracy
-        total_loss += loss.item() * features.size(0)
-        # argmax returns the indices of the maximum values along a specified dimension. In this case, it returns the predicted class labels for each sample in the batch.
-        total_correct += (logits.argmax(dim=1) == answers).sum().item()
-        total_samples += features.size(0)
-
-    # Calculate average loss and accuracy for the epoch
-    avg_loss = total_loss / total_samples
-    accuracy = total_correct / total_samples
-
-    return avg_loss, accuracy
-
-
-def validate_one_epoch(
-    model: nn.Module,
-    data_loader: torch.utils.data.DataLoader,
-    criterion: torch.nn.Module,
-    device: torch.device,
-) -> tuple[float, float]:
-    # Set the model to evaluation mode
-    model.eval()
-
-    # Initialize variables to track loss and accuracy
-    total_loss = 0.0
-    total_correct = 0
-    total_samples = 0
-
-    # Disable gradient computation for validation
-    with torch.no_grad():
-        # Iterate through the data loader
-        for batch in data_loader:
-            # Extract features, padding mask, and answers from the batch
-            features = batch["features"].to(device)
-            padding_mask = batch["padding_mask"].to(device)
-            answers = batch["answers"].to(device)
-
-            # Forward pass through the model
-            logits = model(features, padding_mask)
-
-            # Compute the loss using the criterion
-            loss = criterion(logits, answers)
-
-            # Update total loss and accuracy
-            total_loss += loss.item() * features.size(0)
-            total_correct += (logits.argmax(dim=1) == answers).sum().item()
-            total_samples += features.size(0)
-
-    # Calculate average loss and accuracy for the epoch
-    avg_loss = total_loss / total_samples
-    accuracy = total_correct / total_samples
-
-    return avg_loss, accuracy
+# Schedular config
+MODE = "min"
+FACTOR = 5e-1
+PATIENCE = 2
+MIN_LEARNING_RATE = 1e-6
 
 
 def main():
-    checkpoint_dir = Path("src/gesture_transformer/models/checkpoints")
-    checkpoint_dir.mkdir(parents=True, exist_ok=True)
-    best_model_path = checkpoint_dir / "best_model.pth"
+
+    # Initialize the GestureTransformer model
+    model = GestureTransformer().to(DEVICE)
+    print("Selected device:", DEVICE)
+    print("Model device:", next(model.parameters()).device)
 
     # Load the training and validation datasets
-    loader = GestureDatasetLoader("data/processed")
-    train_data = loader.load("train.pt")
-    val_data = loader.load("val.pt")
+    loader = GestureDatasetLoader(PROCESSED_DIR)
+    train_data = loader.load(TRAIN_FILE)
+    val_data = loader.load(VAL_FILE)
 
     # Create GestureDataset instances
     train_dataset = GestureDataset(train_data)
@@ -120,76 +61,37 @@ def main():
         dataset=train_dataset,
         batch_size=32,
         shuffle=True,
-        num_workers=0,  # Adjust this based on your system capabilities
+        num_workers=NUM_WORKERS,  # Adjust this based on your system capabilities
     )
 
     val_loader = create_data_loader(
         dataset=val_dataset,
         batch_size=32,
         shuffle=False,
-        num_workers=0,  # Adjust this based on your system capabilities
+        num_workers=NUM_WORKERS,  # Adjust this based on your system capabilities
     )
 
-    # Initialize the GestureTransformer model
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = GestureTransformer().to(device)
-    print("Selected device:", device)
-    print("Model device:", next(model.parameters()).device)
-
     criterion = nn.CrossEntropyLoss()
-    optimizer = torch.optim.AdamW(model.parameters(), lr=5e-4)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=LEARNING_RATE)
 
     # Set up a learning rate scheduler to reduce the learning rate when the validation loss plateaus
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer, mode="min", factor=0.5, patience=2, min_lr=1e-6
+        optimizer, mode=MODE, factor=FACTOR, patience=PATIENCE, min_lr=MIN_LEARNING_RATE
     )
 
-    num_epochs = 15
+    trainer = Trainer(
+        device=DEVICE,
+        save_dir=SAVE_DIR,
+        best_model_name_save=BEST_MODEL_NAME_SAVE,
+        model=model,
+        train_loader=train_loader,
+        val_loader=val_loader,
+        criterion=criterion,
+        optimizer=optimizer,
+        scheduler=scheduler,
+    )
 
-    best_val_loss = float("inf")
-
-    for epoch in range(num_epochs):
-        # Train the model for one epoch
-        train_loss, train_accuracy = train_one_epoch(
-            model, train_loader, optimizer, criterion, device
-        )
-
-        # Validate the model for one epoch
-        val_loss, val_accuracy = validate_one_epoch(
-            model, val_loader, criterion, device
-        )
-
-        # Step the learning rate scheduler
-        scheduler.step(val_loss)
-
-        if val_loss < best_val_loss:
-            best_val_loss = val_loss
-
-            torch.save(
-                {
-                    "epoch": epoch + 1,
-                    "model_state_dict": model.state_dict(),
-                    "optimizer_state_dict": optimizer.state_dict(),
-                    "scheduler_state_dict": scheduler.state_dict(),
-                    "val_loss": val_loss,
-                    "val_accuracy": val_accuracy,
-                },
-                best_model_path,
-            )
-
-            print(f"Saved new best model (val_loss={val_loss:.4f})")
-
-        current_lr = optimizer.param_groups[0]["lr"]
-
-        # Print the results for the current epoch
-        print(
-            f"Epoch [{epoch + 1}/{num_epochs}], "
-            f"Train Loss: {train_loss:.4f}, "
-            f"Train Accuracy: {train_accuracy:.4f}, "
-            f"Val Loss: {val_loss:.4f}, "
-            f"Val Accuracy: {val_accuracy:.4f}, "
-            f"Learning Rate: {current_lr:.6f}"
-        )
+    trainer.train(num_epochs=15)
 
 
 if __name__ == "__main__":
