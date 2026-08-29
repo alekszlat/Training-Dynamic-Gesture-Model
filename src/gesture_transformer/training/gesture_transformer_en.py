@@ -51,16 +51,18 @@ class SinusoidalPositionalEncoding(nn.Module):
 class GestureTransformer(nn.Module):
     def __init__(
         self,
-        input_dim: int = 126,
+        input_dim: int,
+        max_len: int,
+        num_classes: int,
         hidden_dim: int = 64,
-        max_len: int = 40,
         num_layers: int = 4,
         num_heads: int = 8,
         dim_feedforward: int = 256,
         dropout: float = 0.2,
-        num_classes: int = 5,
     ):
         super().__init__()
+
+        self.num_classes = num_classes
 
         # [B, T, 126] -> [B, T, 64]
         self.projection = nn.Linear(
@@ -90,7 +92,7 @@ class GestureTransformer(nn.Module):
         # [B, 64] -> [B, 5]
         self.classifier = nn.Linear(
             hidden_dim,
-            num_classes,
+            self.num_classes,
         )
 
     def forward(
@@ -98,6 +100,33 @@ class GestureTransformer(nn.Module):
         x: torch.Tensor,
         padding_mask: torch.Tensor,
     ) -> torch.Tensor:
+        """
+        Run gesture classification.
+
+        Args:
+            x:
+                Input features with shape [B, T, input_dim].
+
+            padding_mask:
+                Boolean tensor with shape [B, T].
+
+                False = valid sequence position.
+                True = padded sequence position.
+
+                This follows PyTorch src_key_padding_mask
+                semantics. Raw masks stored in train.pt use
+                the opposite convention and must be converted
+                before being passed to the model.
+
+        Returns:
+            Raw classification logits with shape
+            [B, num_classes].
+        """
+
+        if padding_mask.dtype != torch.bool:
+            raise TypeError(
+                "padding_mask must be a boolean tensor where True means padding."
+            )
 
         # [B, T, 126] -> [B, T, 64]
         x = self.projection(x)

@@ -13,15 +13,6 @@ class JesterAnnotation:
     raw_label: str
 
 
-SUPPORTED_JESTER_LABELS = {
-    "Swiping Left",
-    "Swiping Right",
-    "Swiping Up",
-    "Swiping Down",
-    "Doing Other Things",
-}
-
-
 class JesterManifestBuilder:
     """Build manifest rows for Jester gesture frame folders."""
 
@@ -32,10 +23,14 @@ class JesterManifestBuilder:
     def __init__(
         self,
         samples_dir: Path,
+        supported_labels: set[str],
         project_root: Path | None = None,
-    ) -> None:
+    ):
         self.samples_dir = samples_dir
         self.project_root = project_root
+        self.supported_labels = {
+            self._to_jester_label(label) for label in supported_labels
+        }
         self.label_mapper = LabelMapper()
 
     def build(self) -> list[dict[str, str]]:
@@ -61,7 +56,7 @@ class JesterManifestBuilder:
         sample_index = 1
 
         for annotation in annotations:
-            if annotation.raw_label not in SUPPORTED_JESTER_LABELS:
+            if annotation.raw_label not in self.supported_labels:
                 continue
 
             internal_label = self.label_mapper.converter_label(annotation.raw_label)
@@ -171,3 +166,6 @@ class JesterManifestBuilder:
             return path.as_posix()
 
         return path.relative_to(self.project_root).as_posix()
+
+    def _to_jester_label(self, label: str) -> str:
+        return label.replace("_", " ").title()

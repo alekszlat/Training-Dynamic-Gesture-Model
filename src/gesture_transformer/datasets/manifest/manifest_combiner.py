@@ -1,25 +1,21 @@
 import csv
 from pathlib import Path
 
-SUPPORTED_LABELS = {
-    "swiping_left",
-    "swiping_right",
-    "swiping_up",
-    "swiping_down",
-    "doing_other_things",
-    "click",
-}
-
 
 class ManifestCombiner:
     """Combine both the recorded and jester lists[dict] into single one and saves it into a csv file."""
 
     def __init__(
-        self, recorded_list: list[dict], jester_list: list[dict], output_path: Path
+        self,
+        recorded_list: list[dict],
+        jester_list: list[dict],
+        output_path: Path,
+        supported_labels: set[str],
     ):
         self.recorded_list = recorded_list
         self.jester_list = jester_list
         self.output_path = output_path
+        self.supported_labels = supported_labels
 
     def build_manifest(self) -> bool:
         combined_manifest = []
@@ -57,7 +53,7 @@ class ManifestCombiner:
         if "label" not in row or not row["label"]:
             return False, "missing label"
 
-        if row["label"] not in SUPPORTED_LABELS:
+        if row["label"] not in self.supported_labels:
             return False, "unsupported label"
 
         if "path" not in row or not row["path"]:

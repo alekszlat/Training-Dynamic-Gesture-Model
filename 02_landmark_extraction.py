@@ -1,5 +1,10 @@
-from pathlib import Path
-
+from config import (
+    LANDMARK_DELEGATE,
+    LANDMARK_OUTPUT_DIR,
+    MANIFEST_PATH,
+    MEDIAPIPE_MODEL_PATH,
+    METADATA_OUTPUT_PATH,
+)
 from gesture_transformer.datasets.landmark_extraction.landmark_extraction_pipeline import (
     LandmarkExtractionPipeline,
 )
@@ -18,14 +23,12 @@ from gesture_transformer.datasets.manifest.sample_manifest_reader import (
 from gesture_transformer.datasets.readers.reader_factory import ReaderFactory
 
 if __name__ == "__main__":
-    MANIFEST_PATH = Path("data/manifests/samples.csv")
-    MODEL_PATH = Path("src/gesture_transformer/models/hand_landmarker.task")
-    LANDMARK_OUTPUT_DIR = Path("data/interim/landmarks")
-    METADATA_OUTPUT_PATH = Path("data/processed/metadata.csv")
-
     manifest_reader = SampleManifestReader(manifest_path=MANIFEST_PATH)
     reader_factory = ReaderFactory()
-    landmark_extractor = LandmarkExtractor(model_path=MODEL_PATH)
+    landmark_extractor = LandmarkExtractor(
+        model_path=MEDIAPIPE_MODEL_PATH,  # gitleaks:allow
+        delegate=LANDMARK_DELEGATE,
+    )
     landmark_saver = LandmarkSaver(landmarks_dir=LANDMARK_OUTPUT_DIR)
     metadata_writer = MetadataWriter(output_path=METADATA_OUTPUT_PATH)
 
