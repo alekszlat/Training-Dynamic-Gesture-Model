@@ -1,14 +1,16 @@
 """Pipeline-wide label consistency tests.
 
-Each pipeline stage has its own idea of which labels are valid:
-  - RecordedManifestBuilder / JesterManifestBuilder produce labels (stage 1)
-  - ManifestCombiner.SUPPORTED_LABELS accepts or rejects them (stage 1 -> 2)
-  - 03_build_tensors.py's LABEL_LIST encodes them into tensors (stage 3)
+The project's canonical supported labels are defined centrally in config.py.
 
-SUPPORTED_LABELS and LABEL_LIST used to be independent, hand-typed sets that
-disagreed on "doing_other_things". These tests assert every stage boundary
-agrees, so a label accepted by one stage can never be rejected by a later
-one.
+These tests verify that every pipeline stage remains consistent with that
+central configuration:
+
+  - RecordedManifestBuilder produces labels accepted by config.SUPPORTED_LABELS.
+  - Jester raw labels map to labels accepted by config.SUPPORTED_LABELS.
+  - 03_build_tensors.py's LABEL_LIST matches config.SUPPORTED_LABELS.
+
+This prevents individual pipeline stages from silently drifting away from
+the project's configured gesture classes.
 
 Author: Hristo Hristov
 """
@@ -16,17 +18,16 @@ Author: Hristo Hristov
 import importlib.util
 from pathlib import Path
 
-from gesture_transformer.datasets.manifest.jester_manifest_builder import (
-    SUPPORTED_JESTER_LABELS,
-)
+from config import SUPPORTED_LABELS
 from gesture_transformer.datasets.manifest.label_mapper import LabelMapper
-from gesture_transformer.datasets.manifest.manifest_combiner import SUPPORTED_LABELS
 from gesture_transformer.datasets.manifest.recorded_manifest_builder import (
     RecordedManifestBuilder,
 )
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
+
+# Folder names expected by RecordedManifestBuilder.
 DOCUMENTED_GESTURE_FOLDERS = [
     "swiping_up",
     "swiping_down",
@@ -36,25 +37,40 @@ DOCUMENTED_GESTURE_FOLDERS = [
 ]
 
 
+# Raw Jester labels used by this project.
+#
+# Jester does not provide a "click" gesture, so only the four swipe
+# gestures are expected to map into the project's supported labels.
+JESTER_GESTURE_LABELS = [
+    "Swiping Left",
+    "Swiping Right",
+    "Swiping Up",
+    "Swiping Down",
+]
+
+
 def _load_label_list_from_build_tensors_script() -> list[str]:
-    """Import LABEL_LIST from 03_build_tensors.py without running its __main__ block."""
+    """Load LABEL_LIST from 03_build_tensors.py without running its main block."""
+
     spec = importlib.util.spec_from_file_location(
-        "build_tensors_script", REPO_ROOT / "03_build_tensors.py"
+        "build_tensors_script",
+        REPO_ROOT / "03_build_tensors.py",
     )
+
+    if spec is None or spec.loader is None:
+        raise ImportError("Could not load 03_build_tensors.py")
+
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
+
     return module.LABEL_LIST
 
 
 def test_documented_folder_layout_produces_supported_labels(tmp_path):
-    """Folders named exactly as documented in the builder's docstring should yield valid labels.
+    """Recorded gesture folders must produce centrally supported labels."""
 
-    ManifestCombiner's SUPPORTED_LABELS assets folder names as "swiping_up",
-    "swiping_down", while documetation and every other file lists them as
-    "swipe_up", "swipe_down", etc. This test ensures unified label names are used
-    across the pipeline.
-    """
     samples_dir = tmp_path / "recorded"
+
     for folder_name in DOCUMENTED_GESTURE_FOLDERS:
         folder = samples_dir / folder_name
         folder.mkdir(parents=True)
@@ -63,28 +79,39 @@ def test_documented_folder_layout_produces_supported_labels(tmp_path):
     builder = RecordedManifestBuilder(samples_dir)
     samples = builder.build()
 
-    unsupported = {sample["label"] for sample in samples} - SUPPORTED_LABELS
+    produced_labels = {sample["label"] for sample in samples}
+    unsupported = produced_labels - SUPPORTED_LABELS
+
     assert not unsupported, (
-        f"Documented folder layout produced labels not in SUPPORTED_LABELS: {unsupported}"
+        "RecordedManifestBuilder produced labels not present in "
+        f"config.SUPPORTED_LABELS: {unsupported}"
     )
 
 
 def test_jester_labels_map_into_supported_labels():
-    """Every label JesterManifestBuilder can emit must be accepted by ManifestCombiner."""
+    """Jester gesture labels must map into centrally supported labels."""
+
     mapper = LabelMapper()
-    mapped_labels = {mapper.converter_label(raw) for raw in SUPPORTED_JESTER_LABELS}
+
+    mapped_labels = {
+        mapper.converter_label(raw_label) for raw_label in JESTER_GESTURE_LABELS
+    }
 
     unsupported = mapped_labels - SUPPORTED_LABELS
+
     assert not unsupported, (
-        f"Jester labels map to values ManifestCombiner rejects: {unsupported}"
+        "Jester labels mapped to values not present in "
+        f"config.SUPPORTED_LABELS: {unsupported}"
     )
 
 
 def test_tensor_builder_label_list_matches_supported_labels():
-    """Every label ManifestCombiner accepts must be usable by the tensor-building stage."""
+    """Tensor-building labels must exactly match the central configuration."""
+
     label_list = _load_label_list_from_build_tensors_script()
 
     assert set(label_list) == SUPPORTED_LABELS, (
         "03_build_tensors.py's LABEL_LIST has drifted from "
-        f"ManifestCombiner.SUPPORTED_LABELS: {set(label_list) ^ SUPPORTED_LABELS}"
+        "config.SUPPORTED_LABELS: "
+        f"{set(label_list) ^ SUPPORTED_LABELS}"
     )
