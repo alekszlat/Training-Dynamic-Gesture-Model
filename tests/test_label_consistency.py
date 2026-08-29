@@ -2,116 +2,154 @@
 
 The project's canonical supported labels are defined centrally in config.py.
 
-These tests verify that every pipeline stage remains consistent with that
-central configuration:
+These tests verify that the pipeline components respect that configuration:
 
-  - RecordedManifestBuilder produces labels accepted by config.SUPPORTED_LABELS.
-  - Jester raw labels map to labels accepted by config.SUPPORTED_LABELS.
-  - 03_build_tensors.py's LABEL_LIST matches config.SUPPORTED_LABELS.
+- RecordedManifestBuilder only produces configured labels.
+- ManifestCombiner rejects labels outside the configured set.
+- Jester labels are normalized into the project's configured label format.
+- LabelEncoder can encode every configured label into a contiguous class index.
+- The configured labels remain unique and valid.
 
-This prevents individual pipeline stages from silently drifting away from
-the project's configured gesture classes.
+The tests intentionally do not inspect the numbered root scripts. Those scripts
+act as the composition layer and pass config.SUPPORTED_LABELS into the component
+that validates labels before the manifest reaches disk.
 
 Author: Hristo Hristov
 """
 
-import importlib.util
+import sys
 from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
 from config import SUPPORTED_LABELS
 from gesture_transformer.datasets.manifest.label_mapper import LabelMapper
+from gesture_transformer.datasets.manifest.manifest_combiner import ManifestCombiner
 from gesture_transformer.datasets.manifest.recorded_manifest_builder import (
     RecordedManifestBuilder,
 )
-
-REPO_ROOT = Path(__file__).resolve().parent.parent
-
-
-# Folder names expected by RecordedManifestBuilder.
-DOCUMENTED_GESTURE_FOLDERS = [
-    "swiping_up",
-    "swiping_down",
-    "swiping_left",
-    "swiping_right",
-    "click",
-]
+from gesture_transformer.datasets.tensor_extraction.label_encoder import LabelEncoder
 
 
-# Raw Jester labels used by this project.
-#
-# Jester does not provide a "click" gesture, so only the four swipe
-# gestures are expected to map into the project's supported labels.
-JESTER_GESTURE_LABELS = [
-    "Swiping Left",
-    "Swiping Right",
-    "Swiping Up",
-    "Swiping Down",
-]
+def test_supported_labels_are_unique():
+    """Configured gesture classes must not contain duplicate labels."""
+
+    assert len(SUPPORTED_LABELS) == len(set(SUPPORTED_LABELS))
 
 
-def _load_label_list_from_build_tensors_script() -> list[str]:
-    """Load LABEL_LIST from 03_build_tensors.py without running its main block."""
-
-    spec = importlib.util.spec_from_file_location(
-        "build_tensors_script",
-        REPO_ROOT / "03_build_tensors.py",
-    )
-
-    if spec is None or spec.loader is None:
-        raise ImportError("Could not load 03_build_tensors.py")
-
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-
-    return module.LABEL_LIST
-
-
-def test_documented_folder_layout_produces_supported_labels(tmp_path):
-    """Recorded gesture folders must produce centrally supported labels."""
-
-    samples_dir = tmp_path / "recorded"
-
-    for folder_name in DOCUMENTED_GESTURE_FOLDERS:
-        folder = samples_dir / folder_name
-        folder.mkdir(parents=True)
-        (folder / "001.mp4").touch()
-
-    builder = RecordedManifestBuilder(samples_dir)
-    samples = builder.build()
-
-    produced_labels = {sample["label"] for sample in samples}
-    unsupported = produced_labels - SUPPORTED_LABELS
-
-    assert not unsupported, (
-        "RecordedManifestBuilder produced labels not present in "
-        f"config.SUPPORTED_LABELS: {unsupported}"
-    )
-
-
-def test_jester_labels_map_into_supported_labels():
-    """Jester gesture labels must map into centrally supported labels."""
+def test_supported_labels_use_internal_label_format():
+    """Configured labels must already use the normalized internal format."""
 
     mapper = LabelMapper()
 
-    mapped_labels = {
-        mapper.converter_label(raw_label) for raw_label in JESTER_GESTURE_LABELS
+    for label in SUPPORTED_LABELS:
+        assert mapper.converter_label(label) == label, (
+            f"Configured label '{label}' is not in normalized internal format."
+        )
+
+
+def test_recorded_builder_produces_supported_labels(tmp_path):
+    """Recorded folders named after configured classes must produce those labels."""
+
+    samples_dir = tmp_path / "recorded"
+
+    for label in SUPPORTED_LABELS:
+        folder = samples_dir / label
+        folder.mkdir(parents=True)
+        (folder / "001.mp4").touch()
+
+    builder = RecordedManifestBuilder(samples_dir=samples_dir)
+
+    samples = builder.build()
+
+    produced_labels = {sample["label"] for sample in samples}
+
+    assert produced_labels == set(SUPPORTED_LABELS), (
+        "RecordedManifestBuilder did not produce exactly the configured labels. "
+        f"Expected: {set(SUPPORTED_LABELS)}, "
+        f"got: {produced_labels}"
+    )
+
+
+def test_combiner_rejects_unsupported_recorded_label(tmp_path):
+    """Unsupported recorded labels must fail before the manifest reaches disk."""
+
+    samples_dir = tmp_path / "recorded"
+
+    supported_folder = samples_dir / next(iter(SUPPORTED_LABELS))
+    supported_folder.mkdir(parents=True)
+    (supported_folder / "001.mp4").touch()
+
+    unsupported_folder = samples_dir / "unsupported_gesture"
+    unsupported_folder.mkdir()
+    (unsupported_folder / "001.mp4").touch()
+
+    recorded_samples = RecordedManifestBuilder(samples_dir=samples_dir).build()
+    output_path = tmp_path / "manifest.csv"
+    combiner = ManifestCombiner(
+        recorded_list=recorded_samples,
+        jester_list=[],
+        output_path=output_path,
+        supported_labels=SUPPORTED_LABELS,
+    )
+
+    assert combiner.build_manifest() is False
+    assert not output_path.exists()
+
+
+def test_jester_style_labels_normalize_to_internal_format():
+    """Human-readable Jester labels must normalize to project label format."""
+
+    mapper = LabelMapper()
+
+    jester_labels = {
+        "Swiping Left",
+        "Swiping Right",
+        "Swiping Up",
+        "Swiping Down",
     }
 
-    unsupported = mapped_labels - SUPPORTED_LABELS
+    mapped_labels = {mapper.converter_label(label) for label in jester_labels}
 
-    assert not unsupported, (
-        "Jester labels mapped to values not present in "
-        f"config.SUPPORTED_LABELS: {unsupported}"
+    assert mapped_labels <= set(SUPPORTED_LABELS), (
+        "Jester labels mapped to values outside config.SUPPORTED_LABELS: "
+        f"{mapped_labels - set(SUPPORTED_LABELS)}"
     )
 
 
-def test_tensor_builder_label_list_matches_supported_labels():
-    """Tensor-building labels must exactly match the central configuration."""
+def test_label_encoder_supports_all_configured_labels():
+    """Every configured gesture must be encodable by the tensor-building stage."""
 
-    label_list = _load_label_list_from_build_tensors_script()
+    encoder = LabelEncoder(list(SUPPORTED_LABELS))
 
-    assert set(label_list) == SUPPORTED_LABELS, (
-        "03_build_tensors.py's LABEL_LIST has drifted from "
-        "config.SUPPORTED_LABELS: "
-        f"{set(label_list) ^ SUPPORTED_LABELS}"
+    encoded_labels = {label: encoder.encode(label) for label in SUPPORTED_LABELS}
+
+    assert set(encoded_labels) == set(SUPPORTED_LABELS)
+
+
+def test_label_encoder_produces_contiguous_class_indices():
+    """Class indices must be contiguous from 0 to number_of_classes - 1."""
+
+    encoder = LabelEncoder(list(SUPPORTED_LABELS))
+
+    indices = {encoder.encode(label) for label in SUPPORTED_LABELS}
+
+    expected_indices = set(range(len(SUPPORTED_LABELS)))
+
+    assert indices == expected_indices, (
+        "LabelEncoder produced non-contiguous class indices. "
+        f"Expected {expected_indices}, got {indices}"
     )
+
+
+def test_label_mapping_contains_exactly_supported_labels():
+    """The generated label mapping must contain exactly the configured classes."""
+
+    encoder = LabelEncoder(list(SUPPORTED_LABELS))
+
+    mapping = encoder.mapping()
+
+    assert set(mapping.keys()) == set(SUPPORTED_LABELS)
+    assert len(mapping) == len(SUPPORTED_LABELS)
