@@ -15,6 +15,9 @@ import cv2 as cv
 
 from gesture_transformer.recording.config import Config
 
+# waitKey reports control combinations as their position in the alphabet.
+CTRL_E = 5
+
 
 class WebcamRecorder:
     """Records one take per call as an mp4 under the active split and label."""
@@ -66,6 +69,31 @@ class WebcamRecorder:
             cv.destroyAllWindows()
 
         return output_path
+
+    def wait_for_start(self) -> bool:
+        """
+        Show a live preview until the user starts the next take or ends the session.
+
+        Returns:
+            True to record the next take, False to end the session.
+        """
+
+        print("Space to record, Ctrl+E to end the session.")
+
+        while True:
+            success, frame = self.recorder.read()
+
+            if success:
+                cv.imshow("Sample Recording", frame)
+
+            key = cv.waitKey(1)  # ms
+
+            if key == ord(" "):
+                return True
+
+            if key == CTRL_E:
+                cv.destroyAllWindows()
+                return False
 
     def close(self) -> None:
         """
