@@ -19,7 +19,7 @@ During a session:
 
 | Key | Mouse | Does |
 |---|---|---|
-| `space` | right click | Start the next take. |
+| `space` | left click | Start the next take. |
 | `q` | middle click | Stop and save the current take. |
 | `e` | | End the session and write its takes out. |
 

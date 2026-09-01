@@ -18,7 +18,7 @@ from gesture_transformer.recording.config import Config
 WINDOW_NAME = "Sample Recording"
 
 IDLE_HINTS = [
-    "space / right click = start take",
+    "space / left click  = start take",
     "q / middle click    = stop take",
     "e                   = end session",
 ]
@@ -185,7 +185,7 @@ class WebcamRecorder:
             None.
         """
 
-        if event == cv.EVENT_RBUTTONDOWN:
+        if event == cv.EVENT_LBUTTONDOWN:
             self.start_clicked = True
         elif event == cv.EVENT_MBUTTONDOWN:
             self.stop_clicked = True
