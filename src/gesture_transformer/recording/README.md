@@ -23,6 +23,10 @@ During a session:
 | `q` | Stop and save the current take. |
 | `e` | End the session and write its takes out. |
 
+Keys only reach the preview window, so click it if it does not have focus. `Ctrl+C` in
+the terminal also ends the session cleanly and still writes out. Do not use `Ctrl+Z`, it
+suspends the process and leaves the camera held open.
+
 Each finished take is checked straight away and its result is printed, along with how
 many takes the session has kept so far. Rejected takes are deleted, so the folders and
 the files stay in step.

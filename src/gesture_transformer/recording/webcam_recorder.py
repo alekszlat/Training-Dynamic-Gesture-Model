@@ -15,6 +15,8 @@ import cv2 as cv
 
 from gesture_transformer.recording.config import Config
 
+WINDOW_NAME = "Sample Recording"
+
 
 class WebcamRecorder:
     """Records one take per call as an mp4 under the active split and label."""
@@ -77,11 +79,25 @@ class WebcamRecorder:
 
         print("Space to record, 'e' to end the session.")
 
+        # Created before the loop so waitKey has a window to read keys from even
+        # while the camera is still warming up, and raised so it takes focus.
+        cv.namedWindow(WINDOW_NAME, cv.WINDOW_AUTOSIZE)
+        cv.setWindowProperty(WINDOW_NAME, cv.WND_PROP_TOPMOST, 1)
+
         while True:
             success, frame = self.recorder.read()
 
             if success:
-                cv.imshow("Sample Recording", frame)
+                cv.putText(
+                    frame,
+                    "space = record    e = end session",
+                    (10, 30),
+                    cv.FONT_HERSHEY_SIMPLEX,
+                    0.6,
+                    (0, 255, 0),
+                    2,
+                )
+                cv.imshow(WINDOW_NAME, frame)
 
             key = cv.waitKey(1)  # ms
 
@@ -130,7 +146,7 @@ class WebcamRecorder:
 
             consecutive_failures = 0
 
-            cv.imshow("Sample Recording", frame)
+            cv.imshow(WINDOW_NAME, frame)
             writer.write(frame)
 
             key = cv.waitKey(1)  # ms
