@@ -17,6 +17,17 @@ from gesture_transformer.recording.config import Config
 
 WINDOW_NAME = "Sample Recording"
 
+IDLE_HINTS = [
+    "space / right click = start take",
+    "q / middle click    = stop take",
+    "e                   = end session",
+]
+
+RECORDING_HINTS = [
+    "RECORDING",
+    "q / middle click = stop take",
+]
+
 
 class WebcamRecorder:
     """Records one take per call as an mp4 under the active split and label."""
@@ -34,6 +45,8 @@ class WebcamRecorder:
 
         self.config = config
         self.recorder = cv.VideoCapture(config.webcam_id)
+        self.start_clicked = False
+        self.stop_clicked = False
 
         if not self.recorder.isOpened():
             raise RuntimeError(
@@ -83,25 +96,20 @@ class WebcamRecorder:
         # while the camera is still warming up, and raised so it takes focus.
         cv.namedWindow(WINDOW_NAME, cv.WINDOW_AUTOSIZE)
         cv.setWindowProperty(WINDOW_NAME, cv.WND_PROP_TOPMOST, 1)
+        cv.setMouseCallback(WINDOW_NAME, self._on_mouse)
+
+        self.start_clicked = False
 
         while True:
             success, frame = self.recorder.read()
 
             if success:
-                cv.putText(
-                    frame,
-                    "space = record    e = end session",
-                    (10, 30),
-                    cv.FONT_HERSHEY_SIMPLEX,
-                    0.6,
-                    (0, 255, 0),
-                    2,
-                )
+                self._draw_hints(frame, IDLE_HINTS, (0, 255, 0))
                 cv.imshow(WINDOW_NAME, frame)
 
             key = cv.waitKey(1)  # ms
 
-            if key == ord(" "):
+            if key == ord(" ") or self.start_clicked:
                 return True
 
             if key == ord("e"):
@@ -131,6 +139,7 @@ class WebcamRecorder:
         """
 
         consecutive_failures = 0
+        self.stop_clicked = False
 
         while True:
             success, frame = self.recorder.read()
@@ -146,13 +155,63 @@ class WebcamRecorder:
 
             consecutive_failures = 0
 
-            cv.imshow(WINDOW_NAME, frame)
             writer.write(frame)
+
+            preview = frame.copy()
+            self._draw_hints(preview, RECORDING_HINTS, (0, 0, 255))
+            cv.imshow(WINDOW_NAME, preview)
 
             key = cv.waitKey(1)  # ms
 
-            if key == ord("q"):
+            if key == ord("q") or self.stop_clicked:
                 break
+
+    def _on_mouse(self, event: int, x: int, y: int, flags: int, param: object) -> None:
+        """
+        Record clicks on the preview window so takes can run without the keyboard.
+
+        Using the mouse leaves the recording hand free to change body position and
+        distance between takes.
+
+        Args:
+            event: OpenCV mouse event code.
+            x: Cursor column. Unused.
+            y: Cursor row. Unused.
+            flags: Event flags. Unused.
+            param: Callback data. Unused.
+
+        Returns:
+            None.
+        """
+
+        if event == cv.EVENT_RBUTTONDOWN:
+            self.start_clicked = True
+        elif event == cv.EVENT_MBUTTONDOWN:
+            self.stop_clicked = True
+
+    def _draw_hints(self, frame, lines: list[str], colour: tuple) -> None:
+        """
+        Draw the control legend onto a preview frame.
+
+        Args:
+            frame: Frame to draw on, modified in place.
+            lines: Legend lines, top to bottom.
+            colour: BGR colour for the text.
+
+        Returns:
+            None.
+        """
+
+        for index, line in enumerate(lines):
+            cv.putText(
+                frame,
+                line,
+                (10, 30 + index * 26),
+                cv.FONT_HERSHEY_SIMPLEX,
+                0.6,
+                colour,
+                2,
+            )
 
     def _read_fps(self) -> float:
         """

@@ -17,11 +17,15 @@ uv run python record_session.py
 
 During a session:
 
-| Key | Does |
-|---|---|
-| `space` | Start the next take. |
-| `q` | Stop and save the current take. |
-| `e` | End the session and write its takes out. |
+| Key | Mouse | Does |
+|---|---|---|
+| `space` | right click | Start the next take. |
+| `q` | middle click | Stop and save the current take. |
+| `e` | | End the session and write its takes out. |
+
+The mouse controls exist so the recording hand stays free, which makes it easier to
+change body position and distance between takes. The controls are also drawn on the
+preview window.
 
 Keys only reach the preview window, so click it if it does not have focus. `Ctrl+C` in
 the terminal also ends the session cleanly and still writes out. Do not use `Ctrl+Z`, it

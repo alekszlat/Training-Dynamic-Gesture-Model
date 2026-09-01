@@ -49,7 +49,7 @@ Landmarks are also the last artifact before any modelling decision applies, and 
 
 **Takes go into `train`, `dev` and `eval` folders.** The tool has to write somewhere, and which takes were shot together is only knowable during the session. Recording that now keeps the option; pooling everything destroys it. Three folders because the set used during tuning and the set kept for a final score should differ.
 
-**The quality bar is per session.** `min_frames` and `min_detection_rate` live in `Config` and are set before each session. 0.97 suits a clean training session; an eval session should look like deployment, where MediaPipe is noisier.
+**The quality bar is per session.** `min_frames` and `min_detection_rate` live in `Config` and are set before each session. A training session can be held to a clean bar; an eval session should look like deployment, where MediaPipe is noisier. The defaults are deliberately loose, because a real gesture is not steady enough for a high detection rate to mean quality rather than stillness.
 
 **`sample_id` is built from the take's timestamped filename**, giving `recorded_click_20260901_143012_004821`. Nothing parses the id. It is an `.npy` filename, a print label, and a non-empty check in `manifest_combiner.py`, so only uniqueness matters. Counting rows in the local manifest, which is what `RecordedManifestBuilder` does, restarts at one on every machine, so two contributors would produce the same ids and silently overwrite each other's landmark files when their sets are merged. A timestamp is unique without anyone coordinating, which makes concatenating separately recorded sets a copy rather than a manual renumbering.
 

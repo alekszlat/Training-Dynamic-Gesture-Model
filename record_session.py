@@ -27,7 +27,7 @@ from gesture_transformer.recording import (
 )
 
 if __name__ == "__main__":
-    LABEL = Label.CLICK
+    LABEL = Label.SWIPING_RIGHT
     SPLIT = Split.TRAIN
 
     config = Config(active_label=LABEL, active_split=SPLIT)

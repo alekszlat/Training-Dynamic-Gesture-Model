@@ -59,8 +59,8 @@ class Config:
     metadata_path: Path = Path("data/processed/recorded_metadata.csv")
     landmarks_dir: Path = Path("data/interim/landmarks/recorded")
     active_label: Label | None = None
-    min_frames: int = 60
-    min_detection_rate: float = 0.97
+    min_frames: int = 40
+    min_detection_rate: float = 0.5
     model_path: Path = Path("src/gesture_transformer/models/hand_landmarker.task")
     webcam_id: int = 0
     default_fps: float = 30.0
