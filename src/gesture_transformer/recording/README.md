@@ -21,7 +21,7 @@ During a session:
 |---|---|
 | `space` | Start the next take. |
 | `q` | Stop and save the current take. |
-| `Ctrl+E` | End the session and write its takes out. |
+| `e` | End the session and write its takes out. |
 
 Each finished take is checked straight away and its result is printed, along with how
 many takes the session has kept so far. Rejected takes are deleted, so the folders and
