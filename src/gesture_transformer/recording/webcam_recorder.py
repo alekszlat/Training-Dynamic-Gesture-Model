@@ -94,7 +94,8 @@ class WebcamRecorder:
 
         # Created before the loop so waitKey has a window to read keys from even
         # while the camera is still warming up, and raised so it takes focus.
-        cv.namedWindow(WINDOW_NAME, cv.WINDOW_AUTOSIZE)
+        cv.namedWindow(WINDOW_NAME, cv.WINDOW_NORMAL)
+        cv.resizeWindow(WINDOW_NAME, *self._preview_size())
         cv.setWindowProperty(WINDOW_NAME, cv.WND_PROP_TOPMOST, 1)
         cv.setMouseCallback(WINDOW_NAME, self._on_mouse)
 
@@ -212,6 +213,20 @@ class WebcamRecorder:
                 colour,
                 2,
             )
+
+    def _preview_size(self) -> tuple[int, int]:
+        """
+        Scale the camera frame size up for the preview window.
+
+        Returns:
+            Preview width and height in pixels.
+        """
+
+        scale = self.config.preview_scale
+        width = self.recorder.get(cv.CAP_PROP_FRAME_WIDTH) * scale
+        height = self.recorder.get(cv.CAP_PROP_FRAME_HEIGHT) * scale
+
+        return int(width), int(height)
 
     def _read_fps(self) -> float:
         """

@@ -48,6 +48,7 @@ class Config:
         min_detection_rate: Lowest fraction of frames with a detected hand, 0 to 1.
         model_path: MediaPipe hand landmarker model used to check takes.
         webcam_id: Index of the camera to open.
+        preview_scale: How much larger than the camera frame the preview window is.
         default_fps: Frame rate used when the camera reports an implausible one.
         max_fps: Highest frame rate accepted from the camera.
         max_consecutive_read_failures: Failed reads in a row before a take ends.
@@ -63,6 +64,7 @@ class Config:
     min_detection_rate: float = 0.5
     model_path: Path = Path("src/gesture_transformer/models/hand_landmarker.task")
     webcam_id: int = 0
+    preview_scale: float = 1.5
     default_fps: float = 30.0
     max_fps: float = 120.0
     max_consecutive_read_failures: int = 30

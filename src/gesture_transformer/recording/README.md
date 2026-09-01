@@ -71,6 +71,7 @@ All settings live in `Config` in `config.py`.
 | `min_detection_rate` | Lowest share of frames with a hand, 0 to 1. |
 | `model_path` | MediaPipe model used to check takes. |
 | `webcam_id` | Which camera to open. |
+| `preview_scale` | How much bigger the preview window is than the frame. |
 | `default_fps` | Fallback when the camera reports nonsense. |
 | `max_fps` | Highest frame rate accepted. |
 | `max_consecutive_read_failures` | Failed reads in a row before a take ends. |
