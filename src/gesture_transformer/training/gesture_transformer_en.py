@@ -123,45 +123,65 @@ class GestureTransformer(nn.Module):
             [B, num_classes].
         """
 
+        # Ensure the model receives the mask format expected by
+        # PyTorch's src_key_padding_mask.
         if padding_mask.dtype != torch.bool:
             raise TypeError(
                 "padding_mask must be a boolean tensor where True means padding."
             )
 
-        # [B, T, 126] -> [B, T, 64]
+        if padding_mask.shape != x.shape[:2]:
+            raise ValueError(
+                "padding_mask must have shape [B, T]. "
+                f"Expected {tuple(x.shape[:2])}, "
+                f"got {tuple(padding_mask.shape)}."
+            )
+
+        # Every gesture must contain at least one real frame.
+        # An all-padded sequence can cause attention to operate
+        # without any valid keys and may produce NaN values.
+        if padding_mask.all(dim=1).any():
+            raise ValueError("Every gesture must contain at least one valid frame.")
+
+        # [B, T, input_dim] -> [B, T, hidden_dim]
         x = self.projection(x)
 
-        # [B, T, 64] -> [B, T, 64]
+        # Add temporal position information.
         x = self.positional_encoding(x)
 
-        # [B, T, 64] -> [B, T, 64]
+        # [B, T, hidden_dim] -> [B, T, hidden_dim]
         x = self.encoder(
             x,
             src_key_padding_mask=padding_mask,
         )
 
-        # padding_mask:
-        # False = valid
-        # True  = padding
+        # Explicitly overwrite padded encoder outputs.
         #
-        # valid_mask:
-        # True  = valid
-        # False = padding
-        valid_mask = (~padding_mask).unsqueeze(-1)
+        # Do not use:
+        #     x = x * valid_mask
+        #
+        # because NaN * 0 is still NaN.
+        x = x.masked_fill(
+            padding_mask.unsqueeze(-1),
+            0.0,
+        )
 
-        # Explicitly convert mask to the same dtype as x.
-        valid_mask = valid_mask.to(x.dtype)
+        # At this point padded positions have been removed.
+        # Any remaining NaN/Inf belongs to a valid frame and
+        # indicates a real numerical problem.
+        if not torch.isfinite(x).all():
+            raise RuntimeError(
+                "Transformer encoder produced NaN or Inf for one or more valid frames."
+            )
 
-        # Remove padded positions from pooling.
-        x = x * valid_mask
+        # Count the number of real frames in each gesture.
+        valid_frame_count = (~padding_mask).sum(dim=1, keepdim=True).clamp(min=1)
 
-        # Number of valid frames in every gesture.
-        valid_frame_count = valid_mask.sum(dim=1).clamp(min=1.0)
-
-        # [B, T, 64] -> [B, 64]
+        # Masked mean pooling:
+        # [B, T, hidden_dim] -> [B, hidden_dim]
         x = x.sum(dim=1) / valid_frame_count
 
-        # [B, 64] -> [B, 5]
+        # [B, hidden_dim] -> [B, num_classes]
         logits = self.classifier(x)
 
         return logits
