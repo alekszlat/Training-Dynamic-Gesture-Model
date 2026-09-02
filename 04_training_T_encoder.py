@@ -19,13 +19,13 @@ from config import (
     TRAINING_DEVICE,
     VAL_FILE,
 )
-from gesture_transformer.training.gesture_transformer_en import GestureTransformer
-from src.gesture_transformer.training.data_loader import create_data_loader
-from src.gesture_transformer.training.gesture_dataset import (
+from gesture_transformer.training.data_loader import create_data_loader
+from gesture_transformer.training.gesture_dataset import (
     GestureDataset,
     GestureDatasetLoader,
 )
-from src.gesture_transformer.training.transformer_en_trainer import Trainer
+from gesture_transformer.training.gesture_transformer_en import GestureTransformer
+from gesture_transformer.training.transformer_en_trainer import Trainer
 
 
 def main():
