@@ -89,7 +89,7 @@ class GestureTransformer(nn.Module):
             num_layers=num_layers,
         )
 
-        # [B, 64] -> [B, 5]
+        # [B, hidden_dim] -> [B, num_classes]
         self.classifier = nn.Linear(
             hidden_dim,
             self.num_classes,

@@ -50,7 +50,26 @@ where:
 - `40` = sequence length
 - `126` = features per frame
 
-The model must classify each sequence into one of five gesture classes.
+The model must classify each sequence into one of the classes represented in
+the current dataset label mapping.
+
+The current label set is a development/testing configuration used to exercise
+the data pipeline and Transformer training workflow. The final production
+gesture vocabulary has not yet been selected and may change as the application
+requirements are finalized.
+
+Current development/testing gesture labels are:
+
+- `swiping_left`
+- `swiping_right`
+- `swiping_up`
+- `swiping_down`
+- `click`
+- `doing_other_things`
+- `no_gesture`
+
+The training entry point derives `num_classes` dynamically from
+`label_to_index.json`; the classifier output size follows that value.
 
 Shorter sequences contain padded positions. These positions must not influence Transformer attention or final sequence pooling.
 
@@ -303,7 +322,7 @@ num_layers       = 4
 num_heads        = 8
 dim_feedforward  = 256
 dropout          = 0.2
-num_classes      = 5
+num_classes      = len(label_to_index)
 ```
 
 The model pipeline is:
@@ -327,9 +346,9 @@ Masked mean pooling
       ↓
 [B, 64]
       ↓
-Linear(64, 5)
+Linear(hidden_dim, num_classes)
       ↓
-[B, 5] logits
+[B, num_classes] logits
 ```
 
 ---
@@ -492,16 +511,14 @@ self.classifier = nn.Linear(
 )
 ```
 
-With the current configuration:
-
-```text
-64 → 5
-```
+`num_classes` is derived from `label_to_index.json` for the current dataset
+build, so this output size follows the active label mapping rather than a
+hard-coded production gesture vocabulary.
 
 The model returns raw logits:
 
 ```text
-[B, 5]
+[B, num_classes]
 ```
 
 Softmax is not applied in `forward`.
@@ -795,7 +812,7 @@ Checkpoint loading and resumed training are not yet implemented.
 | Attention heads        | `8`                                          |
 | Feed-forward dimension | `256`                                        |
 | Dropout                | `0.2`                                        |
-| Number of classes      | `5`                                          |
+| Number of classes      | Derived from `label_to_index.json`          |
 | Batch size             | `32`                                         |
 | DataLoader workers     | `0`                                          |
 | Epochs                 | `15`                                         |
@@ -915,9 +932,9 @@ Sinusoidal positional encoding
       ↓
 Masked mean pooling
       ↓
-Linear(64, 5)
+Linear(hidden_dim, num_classes)
       ↓
-[B, 5]
+[B, num_classes]
 ```
 
 ### `Trainer`

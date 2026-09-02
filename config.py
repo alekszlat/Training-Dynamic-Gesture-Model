@@ -56,10 +56,11 @@ SAMPLES_DIR_JESTER = PROJECT_ROOT / "data" / "raw" / "jester" / "20bn-jester-v1"
 # This file becomes the input contract for landmark extraction.
 SAMPLES_MANIFEST_PATH = PROJECT_ROOT / "data" / "manifests" / "samples.csv"
 
-# Canonical internal gesture classes supported by this project.
+# Current development/testing gesture labels for the dataset pipeline.
 #
-# These labels should be the single source of truth for deciding which
-# samples are allowed into the dataset pipeline.
+# These labels are the single source of truth for deciding which samples are
+# allowed into the current dataset build. The final production gesture
+# vocabulary has not been selected yet.
 SUPPORTED_LABELS = {
     "swiping_left",
     "swiping_right",
