@@ -111,14 +111,16 @@ class Trainer:
 
     def train(self, num_epochs: int) -> dict[str, list]:
 
-        history = {
-            "epoch": [],
-            "train_loss": [],
-            "train_accuracy": [],
-            "val_loss": [],
-            "val_accuracy": [],
-            "learning_rate": [],
-        }
+        history = dict[str, list](
+            {
+                "epoch": [],
+                "train_loss": [],
+                "train_accuracy": [],
+                "val_loss": [],
+                "val_accuracy": [],
+                "learning_rate": [],
+            }
+        )
 
         checkpoint_dir = self.save_dir
         checkpoint_dir.mkdir(parents=True, exist_ok=True)
