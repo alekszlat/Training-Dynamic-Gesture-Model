@@ -66,6 +66,8 @@ SUPPORTED_LABELS = {
     "swiping_up",
     "swiping_down",
     "click",
+    "doing_other_things",
+    "no_gesture",
 }
 
 
@@ -156,7 +158,7 @@ BATCH_SIZE = 32
 # ---------------------------------------------------------------------------
 
 # Maximum number of complete passes through the training dataset.
-NUM_EPOCHS = 25
+NUM_EPOCHS = 30
 
 
 # ---------------------------------------------------------------------------

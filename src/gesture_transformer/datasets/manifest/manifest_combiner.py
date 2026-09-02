@@ -29,7 +29,10 @@ class ManifestCombiner:
             check, message = self._validate_combined_manifest_row(row)
 
             if check:
-                validated_manifest.append(row)
+                if row["label"] in self.supported_labels:
+                    validated_manifest.append(row)
+                else:
+                    continue
             else:
                 invalid_rows.append((row, message))
 
@@ -52,9 +55,6 @@ class ManifestCombiner:
 
         if "label" not in row or not row["label"]:
             return False, "missing label"
-
-        if row["label"] not in self.supported_labels:
-            return False, "unsupported label"
 
         if "path" not in row or not row["path"]:
             return False, "missing path"

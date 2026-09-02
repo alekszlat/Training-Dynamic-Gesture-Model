@@ -23,14 +23,10 @@ class JesterManifestBuilder:
     def __init__(
         self,
         samples_dir: Path,
-        supported_labels: set[str],
         project_root: Path | None = None,
     ):
         self.samples_dir = samples_dir
         self.project_root = project_root
-        self.supported_labels = {
-            self._to_jester_label(label) for label in supported_labels
-        }
         self.label_mapper = LabelMapper()
 
     def build(self) -> list[dict[str, str]]:
@@ -56,9 +52,6 @@ class JesterManifestBuilder:
         sample_index = 1
 
         for annotation in annotations:
-            if annotation.raw_label not in self.supported_labels:
-                continue
-
             internal_label = self.label_mapper.converter_label(annotation.raw_label)
 
             if internal_label is None:
