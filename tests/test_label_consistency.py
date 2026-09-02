@@ -5,7 +5,7 @@ The project's canonical supported labels are defined centrally in config.py.
 These tests verify that the pipeline components respect that configuration:
 
 - RecordedManifestBuilder only produces configured labels.
-- ManifestCombiner rejects labels outside the configured set.
+- ManifestCombiner keeps labels outside the configured set out of the output.
 - Jester labels are normalized into the project's configured label format.
 - LabelEncoder can encode every configured label into a contiguous class index.
 - The configured labels remain unique and valid.
@@ -73,8 +73,8 @@ def test_recorded_builder_produces_supported_labels(tmp_path):
     )
 
 
-def test_combiner_rejects_unsupported_recorded_label(tmp_path):
-    """Unsupported recorded labels must fail before the manifest reaches disk."""
+def test_combiner_filters_unsupported_recorded_label(tmp_path):
+    """Unsupported recorded labels must not reach the manifest on disk."""
 
     samples_dir = tmp_path / "recorded"
 
@@ -95,8 +95,12 @@ def test_combiner_rejects_unsupported_recorded_label(tmp_path):
         supported_labels=SUPPORTED_LABELS,
     )
 
-    assert combiner.build_manifest() is False
-    assert not output_path.exists()
+    assert combiner.build_manifest() is True
+
+    manifest_text = output_path.read_text(encoding="utf-8")
+
+    assert unsupported_folder.name not in manifest_text
+    assert supported_folder.name in manifest_text
 
 
 def test_jester_style_labels_normalize_to_internal_format():
