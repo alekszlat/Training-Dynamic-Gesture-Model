@@ -4,6 +4,7 @@ import torch
 from torch import nn
 
 from config import (
+    BATCH_SIZE,
     BEST_MODEL_FILENAME,
     CHECKPOINT_DIR,
     LABEL_MAPPING_FILE,
@@ -28,6 +29,26 @@ from gesture_transformer.training.gesture_transformer_en import GestureTransform
 from gesture_transformer.training.transformer_en_trainer import Trainer
 
 
+def validate_target_range(
+    targets: torch.Tensor,
+    num_classes: int,
+    split_name: str,
+) -> None:
+    if targets.numel() == 0:
+        raise ValueError(f"{split_name} targets are empty.")
+
+    min_target = targets.min().item()
+    max_target = targets.max().item()
+
+    if min_target < 0 or max_target >= num_classes:
+        raise ValueError(
+            f"{split_name} targets must be in the range "
+            f"[0, {num_classes - 1}]. "
+            f"Found minimum={min_target}, "
+            f"maximum={max_target}."
+        )
+
+
 def main():
     # Load the training and validation datasets
     loader = GestureDatasetLoader(PROCESSED_DIR)
@@ -44,6 +65,38 @@ def main():
         label_to_index = json.load(file)
 
     num_classes = len(label_to_index)
+
+    validate_target_range(
+        train_data["y"],
+        num_classes,
+        "Training",
+    )
+
+    validate_target_range(
+        val_data["y"],
+        num_classes,
+        "Validation",
+    )
+
+    class_counts = torch.bincount(
+        train_data["y"],
+        minlength=num_classes,
+    )
+
+    missing_labels = [
+        label
+        for label, index in label_to_index.items()
+        if class_counts[index].item() == 0
+    ]
+
+    if missing_labels:
+        raise ValueError(
+            "The following configured classes have no "
+            f"training samples: {missing_labels}"
+        )
+
+    for label, index in label_to_index.items():
+        print(f"{label}: {class_counts[index].item()} training samples")
 
     # Check loaded data
     train_x = train_data["x"]
@@ -67,9 +120,6 @@ def main():
             "Label mapping indices must be contiguous from 0 to num_classes - 1."
         )
 
-    if train_data["y"].max().item() >= num_classes:
-        raise ValueError("Training target exceeds model class count.")
-
     # Initialize the GestureTransformer model
     model = GestureTransformer(
         input_dim=input_dim,
@@ -86,14 +136,14 @@ def main():
     # Create DataLoaders for training and validation datasets
     train_loader = create_data_loader(
         dataset=train_dataset,
-        batch_size=32,
+        batch_size=BATCH_SIZE,
         shuffle=True,
         num_workers=NUM_WORKERS,  # Adjust this based on your system capabilities
     )
 
     val_loader = create_data_loader(
         dataset=val_dataset,
-        batch_size=32,
+        batch_size=BATCH_SIZE,
         shuffle=False,
         num_workers=NUM_WORKERS,  # Adjust this based on your system capabilities
     )
@@ -122,6 +172,7 @@ def main():
         scheduler=scheduler,
     )
 
+    # history =
     trainer.train(NUM_EPOCHS)
 
 

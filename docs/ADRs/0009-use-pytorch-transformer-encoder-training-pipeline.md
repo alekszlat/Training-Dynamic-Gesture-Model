@@ -38,17 +38,18 @@ The six values per landmark are:
 - `Δy`
 - `Δz`
 
-Gesture sequences are normalized to a maximum length of 40 frames.
+Gesture sequences are currently normalized to 40 frames by the tensor-building
+configuration.
 
-The feature tensor therefore follows:
+The current processed development dataset therefore follows:
 
 `[N, 40, 126]`
 
 where:
 
 - `N` = number of samples
-- `40` = sequence length
-- `126` = features per frame
+- `40` = current configured sequence length
+- `126` = current features per frame
 
 The model must classify each sequence into one of the classes represented in
 the current dataset label mapping.
@@ -68,10 +69,18 @@ Current development/testing gesture labels are:
 - `doing_other_things`
 - `no_gesture`
 
-The training entry point derives `num_classes` dynamically from
-`label_to_index.json`; the classifier output size follows that value.
+The tensor-building entry point receives `TARGET_SEQUENCE_LENGTH` from
+`config.py`. The training entry point derives:
 
-Shorter sequences contain padded positions. These positions must not influence Transformer attention or final sequence pooling.
+- `input_dim` from `train_data["x"].shape[-1]`
+- `max_len` from `train_data["x"].shape[-2]`
+- `num_classes` from `label_to_index.json`
+
+The classifier output size follows the generated dataset label mapping rather
+than a hard-coded production gesture vocabulary.
+
+Shorter sequences contain padded positions. These positions must not influence
+Transformer attention or final sequence pooling.
 
 The training pipeline must also support:
 
@@ -115,6 +124,14 @@ The padding mask is used in:
 2. masked mean pooling
 
 Training and validation are handled by a separate `Trainer` class.
+
+Internal Python imports use the installed package path:
+
+```text
+gesture_transformer.*
+```
+
+`src.gesture_transformer.*` is not a supported import path.
 
 ---
 
@@ -174,26 +191,37 @@ Expected shapes:
 
 ```text
 features:
-[N, 40, 126]
+[N, T, F]
+torch.float32
 
 answers:
 [N]
+torch.int64 / torch.long
 
 padding_mask:
-[N, 40]
+[N, T]
+torch.bool after Dataset conversion
+
+sample_ids:
+list[str]
+
+labels:
+list[str]
 ```
+
+The full padding-mask shape must match `features.shape[:2]`.
 
 A single dataset sample contains:
 
 ```text
 features:
-[40, 126]
+[T, F]
 
 answers:
 scalar class index
 
 padding_mask:
-[40]
+[T]
 
 sample_id:
 string
@@ -201,6 +229,9 @@ string
 label:
 string
 ```
+
+The sample type is mixed: tensors are returned for `features`, `answers`, and
+`padding_mask`; strings are returned for `sample_id` and `label`.
 
 ---
 
@@ -236,7 +267,8 @@ Converted mask:
 F F F F T T
 ```
 
-The stored mask is used instead of deriving padding from zero-valued feature vectors because a valid frame may still contain an all-zero feature vector.
+The stored mask is used instead of deriving padding from zero-valued feature
+vectors because a valid frame may still contain an all-zero feature vector.
 
 ---
 
@@ -244,11 +276,11 @@ The stored mask is used instead of deriving padding from zero-valued feature vec
 
 DataLoaders are created using `create_data_loader`.
 
-Current configuration:
+Current configuration values come from `config.py`:
 
 ```text
-batch_size = 32
-num_workers = 0
+batch_size = config.BATCH_SIZE
+num_workers = config.NUM_WORKERS
 ```
 
 Training loader:
@@ -267,13 +299,13 @@ A normal batch contains:
 
 ```text
 features:
-[B, 40, 126]
+[B, T, F]
 
 answers:
 [B]
 
 padding_mask:
-[B, 40]
+[B, T]
 ```
 
 The DataLoader also batches `sample_id` and `label` metadata.
@@ -282,18 +314,24 @@ The DataLoader also batches `sample_id` and `label` metadata.
 
 ## Device handling
 
-The training script selects the device with:
+The training script receives its device from `config.TRAINING_DEVICE`, which is
+defined as:
 
 ```python
-DEVICE = torch.device(
+TRAINING_DEVICE = torch.device(
     "cuda" if torch.cuda.is_available() else "cpu"
 )
 ```
 
-The model is moved with:
+The model is constructed with dimensions derived from the processed training
+artifacts and then moved to that device:
 
 ```python
-model = GestureTransformer().to(DEVICE)
+model = GestureTransformer(
+    input_dim=input_dim,
+    max_len=sequence_length,
+    num_classes=num_classes,
+).to(TRAINING_DEVICE)
 ```
 
 Inside training and validation, these tensors are moved to the selected device:
@@ -310,41 +348,64 @@ The positional encoding moves with the model because it is registered as a buffe
 
 ---
 
-## Model architecture
+## Target validation
 
-The current `GestureTransformer` defaults are:
+The training entry point validates target class indices before training.
+
+Both training and validation targets must be in:
 
 ```text
-input_dim        = 126
+[0, num_classes - 1]
+```
+
+The pipeline fails before training if either split contains an empty target
+tensor or a target index outside that range.
+
+The current entry point also checks that every class in `label_to_index.json`
+has at least one training sample.
+
+---
+
+## Model architecture
+
+`GestureTransformer` requires these dimensions explicitly:
+
+```text
+input_dim        = train_data["x"].shape[-1]
+max_len          = train_data["x"].shape[-2]
+num_classes      = len(label_to_index)
+```
+
+The current architecture hyperparameters are:
+
+```text
 hidden_dim       = 64
-max_len          = 40
 num_layers       = 4
 num_heads        = 8
 dim_feedforward  = 256
 dropout          = 0.2
-num_classes      = len(label_to_index)
 ```
 
 The model pipeline is:
 
 ```text
-[B, 40, 126]
+[B, T, input_dim]
       ↓
-Linear(126, 64)
+Linear(input_dim, hidden_dim)
       ↓
-[B, 40, 64]
+[B, T, hidden_dim]
       ↓
 Sinusoidal positional encoding
       ↓
-[B, 40, 64]
+[B, T, hidden_dim]
       ↓
 4 × Transformer encoder layers
       ↓
-[B, 40, 64]
+[B, T, hidden_dim]
       ↓
 Masked mean pooling
       ↓
-[B, 64]
+[B, hidden_dim]
       ↓
 Linear(hidden_dim, num_classes)
       ↓
@@ -355,7 +416,8 @@ Linear(hidden_dim, num_classes)
 
 ## Linear projection
 
-The model projects each frame from 126 features to 64 features:
+The model projects each frame from `input_dim` features to `hidden_dim`
+features:
 
 ```python
 self.projection = nn.Linear(
@@ -367,13 +429,13 @@ self.projection = nn.Linear(
 This changes:
 
 ```text
-[B, 40, 126]
+[B, T, input_dim]
 ```
 
 to:
 
 ```text
-[B, 40, 64]
+[B, T, hidden_dim]
 ```
 
 ---
@@ -437,10 +499,28 @@ src_key_padding_mask=padding_mask
 The Transformer preserves shape:
 
 ```text
-[B, 40, 64]
+[B, T, hidden_dim]
 →
-[B, 40, 64]
+[B, T, hidden_dim]
 ```
+
+The model `forward` contract requires:
+
+```text
+x:
+[B, T, input_dim]
+
+padding_mask:
+bool [B, T]
+False = valid position
+True  = padded position
+```
+
+The model validates that:
+
+- `padding_mask` has dtype `torch.bool`
+- `padding_mask.shape == x.shape[:2]`
+- each sample contains at least one valid frame
 
 ---
 
@@ -449,31 +529,39 @@ The Transformer preserves shape:
 The Transformer returns:
 
 ```text
-[B, 40, 64]
+[B, T, hidden_dim]
 ```
 
-The padding mask is inverted:
+Padded encoder outputs are explicitly overwritten before pooling:
 
 ```python
-valid_mask = (~padding_mask).unsqueeze(-1)
+x = x.masked_fill(
+    padding_mask.unsqueeze(-1),
+    0.0,
+)
 ```
 
-and converted to the same dtype as the encoder output:
+This uses `masked_fill` instead of multiplication because:
 
-```python
-valid_mask = valid_mask.to(x.dtype)
+```text
+NaN * 0 = NaN
 ```
 
-Padded positions are removed from the pooling sum:
+Overwriting padded positions guarantees that padded NaN values are removed
+before pooling. After padded positions are cleared, the model checks the
+remaining encoder output with:
 
 ```python
-x = x * valid_mask
+torch.isfinite(x).all()
 ```
 
-The number of valid frames is calculated with:
+Any remaining NaN or Inf belongs to a valid sequence position and is treated as
+a real numerical error.
+
+The number of valid frames is calculated from the inverted padding mask:
 
 ```python
-valid_frame_count = valid_mask.sum(dim=1).clamp(min=1.0)
+valid_frame_count = (~padding_mask).sum(dim=1, keepdim=True).to(x.dtype)
 ```
 
 The final sequence representation is:
@@ -485,16 +573,19 @@ x = x.sum(dim=1) / valid_frame_count
 This reduces:
 
 ```text
-[B, 40, 64]
+[B, T, hidden_dim]
 ```
 
 to:
 
 ```text
-[B, 64]
+[B, hidden_dim]
 ```
 
 Only valid frames contribute to the mean.
+
+All-padded samples are rejected before pooling, so the valid-frame count is
+never zero.
 
 Masked mean pooling is a project implementation choice.
 
@@ -602,7 +693,7 @@ and printed after every epoch.
 
 ## Trainer
 
-The `Trainer` class receives:
+The `Trainer` class stores and uses:
 
 - device
 - checkpoint directory
@@ -629,7 +720,7 @@ train()
 Training begins with:
 
 ```python
-model.train()
+self.model.train()
 ```
 
 For each batch:
@@ -679,7 +770,7 @@ total_correct / total_samples
 Validation begins with:
 
 ```python
-model.eval()
+self.model.eval()
 ```
 
 Gradient tracking is disabled:
@@ -705,36 +796,46 @@ Validation accuracy is calculated using the argmax class predictions.
 
 ---
 
+## Training history
+
+`Trainer.train()` records and returns per-epoch history:
+
+```text
+epoch
+train_loss
+train_accuracy
+val_loss
+val_accuracy
+learning_rate
+```
+
+The current implementation keeps this history in memory and returns it from
+`train()`. It does not yet save the history to disk.
+
+---
+
 ## Training duration
 
-The training script currently defines:
+The training duration is configured in `config.py`:
 
 ```python
-NUM_EPOCHS = 15
+NUM_EPOCHS = 30
 ```
 
-The current invocation still uses:
+The training entry point passes that value to the Trainer:
 
 ```python
-trainer.train(num_epochs=15)
+trainer.train(NUM_EPOCHS)
 ```
-
-This should eventually be changed to:
-
-```python
-trainer.train(num_epochs=NUM_EPOCHS)
-```
-
-so the constant becomes the single source of truth.
 
 ---
 
 ## Best-model checkpointing
 
-Checkpoints are saved under:
+Checkpoints are saved under the configured checkpoint directory:
 
 ```text
-src/gesture_transformer/models/checkpoints/
+outputs/checkpoints/
 ```
 
 The current checkpoint filename is:
@@ -798,33 +899,38 @@ Checkpoint loading and resumed training are not yet implemented.
 
 ## Current configuration
 
-| Parameter              | Value                                        |
-| ---------------------- | -------------------------------------------- |
-| Processed directory    | `data/processed`                             |
-| Training file          | `train.pt`                                   |
-| Validation file        | `val.pt`                                     |
-| Checkpoint directory   | `src/gesture_transformer/models/checkpoints` |
-| Checkpoint filename    | `best_model.pth`                             |
-| Input dimension        | `126`                                        |
-| Sequence length        | `40`                                         |
-| Hidden dimension       | `64`                                         |
-| Transformer layers     | `4`                                          |
-| Attention heads        | `8`                                          |
-| Feed-forward dimension | `256`                                        |
-| Dropout                | `0.2`                                        |
-| Number of classes      | Derived from `label_to_index.json`          |
-| Batch size             | `32`                                         |
-| DataLoader workers     | `0`                                          |
-| Epochs                 | `15`                                         |
-| Loss                   | `CrossEntropyLoss`                           |
-| Optimizer              | `AdamW`                                      |
-| Initial learning rate  | `0.0005`                                     |
-| Scheduler              | `ReduceLROnPlateau`                          |
-| Scheduler mode         | `min`                                        |
-| Scheduler factor       | `0.5`                                        |
-| Scheduler patience     | `2`                                          |
-| Minimum learning rate  | `0.000001`                                   |
-| Device                 | CUDA when available, otherwise CPU           |
+The numbered root scripts use `config.py` as the composition/configuration
+layer.
+
+| Parameter              | Current source/value                                      |
+| ---------------------- | --------------------------------------------------------- |
+| Processed directory    | `config.PROCESSED_DIR` -> `data/processed`                |
+| Training file          | `config.TRAIN_FILE` -> `train.pt`                         |
+| Validation file        | `config.VAL_FILE` -> `val.pt`                             |
+| Label mapping file     | `config.LABEL_MAPPING_FILE` -> `label_to_index.json`      |
+| Checkpoint directory   | `config.CHECKPOINT_DIR` -> `outputs/checkpoints`          |
+| Checkpoint filename    | `config.BEST_MODEL_FILENAME` -> `best_model.pth`          |
+| Input dimension        | Derived from processed training tensor shape              |
+| Sequence length        | Derived from processed training tensor shape              |
+| Tensor target length   | `config.TARGET_SEQUENCE_LENGTH` -> `40`                   |
+| Hidden dimension       | `64`                                                      |
+| Transformer layers     | `4`                                                       |
+| Attention heads        | `8`                                                       |
+| Feed-forward dimension | `256`                                                     |
+| Dropout                | `0.2`                                                     |
+| Number of classes      | Derived from `label_to_index.json`                        |
+| Batch size             | `config.BATCH_SIZE` -> `32`                               |
+| DataLoader workers     | `config.NUM_WORKERS` -> `1`                               |
+| Epochs                 | `config.NUM_EPOCHS` -> `30`                               |
+| Loss                   | `CrossEntropyLoss`                                        |
+| Optimizer              | `AdamW`                                                   |
+| Initial learning rate  | `config.LEARNING_RATE` -> `0.0005`                        |
+| Scheduler              | `ReduceLROnPlateau`                                       |
+| Scheduler mode         | `config.SCHEDULER_MODE` -> `min`                          |
+| Scheduler factor       | `config.SCHEDULER_FACTOR` -> `0.5`                        |
+| Scheduler patience     | `config.SCHEDULER_PATIENCE` -> `2`                        |
+| Minimum learning rate  | `config.MIN_LEARNING_RATE` -> `0.000001`                  |
+| Device                 | `config.TRAINING_DEVICE`: CUDA when available, else CPU   |
 
 ---
 
@@ -851,37 +957,37 @@ Checkpoint loading and resumed training are not yet implemented.
 - Validation loss controls best-model checkpointing.
 - Later epochs with worse validation loss do not overwrite the best model.
 - Optimizer and scheduler states are preserved for future resume support.
+- Input dimension, sequence length, and class count are derived from generated
+  dataset artifacts.
 
 ### Negative
 
 - The pipeline is coupled to the `.pt` keys `x`, `y`, `mask`, `sample_ids`, and `labels`.
-- `GestureDataset` does not currently enforce feature and answer dtypes.
-- Padding-mask validation currently checks sample count but not the complete `[N, T]` shape.
-- `GestureDataset.__getitem__` is annotated as `dict[str, torch.Tensor]` even though it also returns strings.
-- Batch size is currently hardcoded in the training entry point.
-- `NUM_EPOCHS` exists but the literal `15` is still passed to `Trainer.train`.
 - Hyperparameters are module-level constants rather than a dedicated configuration object.
 - Only the best validation-loss checkpoint is kept.
 - Checkpoint restoration is not yet implemented.
 - Resumed training is not yet implemented.
-- Training history is printed but not stored.
+- Training history is returned but not yet saved to disk.
 - Evaluation currently provides only loss and accuracy.
 - Confusion matrix is not yet implemented.
 - Precision, recall, and F1 are not yet implemented.
 - Untouched test-set evaluation is not yet implemented.
-- Import paths currently mix `gesture_transformer...` and `src.gesture_transformer...`.
 
 ---
 
 ## Follow-on work
 
-- Use `NUM_EPOCHS` when calling `Trainer.train`.
-- Move batch size into a named configuration value.
-- Normalize package import paths.
-- Validate the complete padding-mask shape against `features.shape[:2]`.
-- Correct the `GestureDataset.__getitem__` return annotation.
-- Optionally enforce feature and answer dtypes.
-- Record per-epoch training history.
+- Add automated tests for `GestureDataset` loading and validation.
+- Add automated tests for mask conversion and mask-shape validation.
+- Add model output-shape tests.
+- Add masked mean-pooling tests.
+- Add a padded-NaN test.
+- Add an all-padded sample rejection test.
+- Add Trainer training and validation tests.
+- Add scheduler stepping tests.
+- Add device handling tests.
+- Add checkpoint-saving tests.
+- Save per-epoch training history to disk.
 - Plot training and validation loss.
 - Plot training and validation accuracy.
 - Add confusion matrix.
@@ -893,7 +999,6 @@ Checkpoint loading and resumed training are not yet implemented.
 - Add checkpoint loading.
 - Add standalone inference.
 - Add resumed-training support.
-- Add automated tests for dataset loading, mask conversion, model output, pooling, training, validation, scheduler stepping, device handling, and checkpoint saving.
 
 ---
 
@@ -907,7 +1012,9 @@ Loads processed `.pt` dictionaries from CPU storage.
 
 ### `GestureDataset`
 
-Validates dataset structure, converts the stored mask into PyTorch padding-mask semantics, and exposes individual gesture samples.
+Validates dataset structure, converts the stored mask into PyTorch padding-mask
+semantics, and exposes individual gesture samples with mixed tensor/string
+types.
 
 ### `create_data_loader`
 
@@ -922,9 +1029,9 @@ Creates fixed temporal positional encodings and registers them as a model buffer
 Implements:
 
 ```text
-[B, 40, 126]
+[B, T, input_dim]
       ↓
-Linear(126, 64)
+Linear(input_dim, hidden_dim)
       ↓
 Sinusoidal positional encoding
       ↓
@@ -937,6 +1044,10 @@ Linear(hidden_dim, num_classes)
 [B, num_classes]
 ```
 
+It validates padding-mask dtype and shape, rejects all-padded samples, clears
+padded encoder outputs with `masked_fill`, and treats remaining NaN/Inf values
+as numerical errors.
+
 ### `Trainer`
 
 Implements:
@@ -948,6 +1059,7 @@ Implements:
 - device movement
 - scheduler stepping
 - learning-rate reporting
+- per-epoch history collection
 - best-model checkpoint saving
 
 ---

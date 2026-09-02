@@ -30,14 +30,10 @@ class Trainer:
 
     def train_one_epoch(
         self,
-        model: nn.Module,
-        data_loader: torch.utils.data.DataLoader,
-        optimizer: torch.optim.Optimizer,
-        criterion: torch.nn.Module,
     ) -> tuple[float, float]:
 
         # Set the model to training mode
-        model.train()
+        self.model.train()
 
         # Initialize variables to track loss and accuracy
         total_loss = 0.0
@@ -45,24 +41,24 @@ class Trainer:
         total_samples = 0
 
         # Iterate through the data loader
-        for batch in data_loader:
+        for batch in self.train_loader:
             # Extract features, padding mask, and answers from the batch
             features = batch["features"].to(self.device)
             padding_mask = batch["padding_mask"].to(self.device)
             answers = batch["answers"].to(self.device)
 
             # Zero the gradients of the optimizer
-            optimizer.zero_grad()
+            self.optimizer.zero_grad()
 
             # Forward pass through the model
-            logits = model(features, padding_mask)
+            logits = self.model(features, padding_mask)
 
             # Compute the loss using the criterion
-            loss = criterion(logits, answers)
+            loss = self.criterion(logits, answers)
 
             # Backward pass and optimization step
             loss.backward()
-            optimizer.step()
+            self.optimizer.step()
 
             # Update total loss and accuracy
             total_loss += loss.item() * features.size(0)
@@ -78,12 +74,9 @@ class Trainer:
 
     def validate_one_epoch(
         self,
-        model: nn.Module,
-        data_loader: torch.utils.data.DataLoader,
-        criterion: torch.nn.Module,
     ) -> tuple[float, float]:
         # Set the model to evaluation mode
-        model.eval()
+        self.model.eval()
 
         # Initialize variables to track loss and accuracy
         total_loss = 0.0
@@ -93,17 +86,17 @@ class Trainer:
         # Disable gradient computation for validation
         with torch.no_grad():
             # Iterate through the data loader
-            for batch in data_loader:
+            for batch in self.val_loader:
                 # Extract features, padding mask, and answers from the batch
                 features = batch["features"].to(self.device)
                 padding_mask = batch["padding_mask"].to(self.device)
                 answers = batch["answers"].to(self.device)
 
                 # Forward pass through the model
-                logits = model(features, padding_mask)
+                logits = self.model(features, padding_mask)
 
                 # Compute the loss using the criterion
-                loss = criterion(logits, answers)
+                loss = self.criterion(logits, answers)
 
                 # Update total loss and accuracy
                 total_loss += loss.item() * features.size(0)
@@ -116,7 +109,16 @@ class Trainer:
 
         return avg_loss, accuracy
 
-    def train(self, num_epochs: int):
+    def train(self, num_epochs: int) -> dict[str, list]:
+
+        history = {
+            "epoch": [],
+            "train_loss": [],
+            "train_accuracy": [],
+            "val_loss": [],
+            "val_accuracy": [],
+            "learning_rate": [],
+        }
 
         checkpoint_dir = self.save_dir
         checkpoint_dir.mkdir(parents=True, exist_ok=True)
@@ -126,22 +128,22 @@ class Trainer:
 
         for epoch in range(num_epochs):
             # Train the model for one epoch
-            train_loss, train_accuracy = self.train_one_epoch(
-                self.model,
-                self.train_loader,
-                self.optimizer,
-                self.criterion,
-            )
+            train_loss, train_accuracy = self.train_one_epoch()
 
             # Validate the model for one epoch
-            val_loss, val_accuracy = self.validate_one_epoch(
-                self.model,
-                self.val_loader,
-                self.criterion,
-            )
+            val_loss, val_accuracy = self.validate_one_epoch()
 
             # Step the learning rate scheduler
             self.scheduler.step(val_loss)
+
+            current_lr = self.optimizer.param_groups[0]["lr"]
+
+            history["epoch"].append(epoch + 1)
+            history["train_loss"].append(train_loss)
+            history["train_accuracy"].append(train_accuracy)
+            history["val_loss"].append(val_loss)
+            history["val_accuracy"].append(val_accuracy)
+            history["learning_rate"].append(current_lr)
 
             if val_loss < best_val_loss:
                 best_val_loss = val_loss
@@ -171,3 +173,5 @@ class Trainer:
                 f"Val Accuracy: {val_accuracy:.4f}, "
                 f"Learning Rate: {current_lr:.6f}"
             )
+
+        return history

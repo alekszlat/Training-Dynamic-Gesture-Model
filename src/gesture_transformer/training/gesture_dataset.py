@@ -1,8 +1,16 @@
 from pathlib import Path
-from typing import Any
+from typing import Any, TypedDict
 
 import torch
 from torch.utils.data import Dataset
+
+
+class GestureSample(TypedDict):
+    features: torch.Tensor
+    answers: torch.Tensor
+    padding_mask: torch.Tensor
+    sample_id: str
+    label: str
 
 
 class GestureDataset(Dataset):
@@ -49,6 +57,7 @@ class GestureDataset(Dataset):
         self.padding_mask = data[padding_mask] == 0
         self.sample_ids = data[sample_ids]
         self.labels = data[label_key]
+        expected_mask_shape = self.features.shape[:2]
 
         if not isinstance(self.features, torch.Tensor):
             raise TypeError(
@@ -69,6 +78,23 @@ class GestureDataset(Dataset):
         if not isinstance(self.labels, list):
             raise TypeError(f"Labels must be a list, got {type(self.labels)}")
 
+        if self.features.dtype != torch.float32:
+            raise TypeError(
+                f"Features must use torch.float32. Got {self.features.dtype}."
+            )
+
+        if self.answers.dtype != torch.long:
+            raise TypeError(
+                "Answers must use torch.long (torch.int64) "
+                "for CrossEntropyLoss. "
+                f"Got {self.answers.dtype}."
+            )
+
+        if self.padding_mask.dtype != torch.bool:
+            raise TypeError(
+                f"Padding mask must use torch.bool. Got {self.padding_mask.dtype}."
+            )
+
         if self.features.dim() != 3:
             raise ValueError(
                 "Expected features with shape "
@@ -88,10 +114,12 @@ class GestureDataset(Dataset):
                 f"Got {self.features.shape[0]} and {self.answers.shape[0]}."
             )
 
-        if self.features.shape[0] != self.padding_mask.shape[0]:
+        if self.padding_mask.shape != expected_mask_shape:
             raise ValueError(
-                "Number of samples in features and padding mask must match. "
-                f"Got {self.features.shape[0]} and {self.padding_mask.shape[0]}."
+                "Padding mask shape must match the sample and frame "
+                "dimensions of features. "
+                f"Expected {tuple(expected_mask_shape)}, "
+                f"got {tuple(self.padding_mask.shape)}."
             )
 
         if self.features.shape[0] != len(self.sample_ids):
@@ -109,7 +137,7 @@ class GestureDataset(Dataset):
     def __len__(self) -> int:
         return self.features.shape[0]
 
-    def __getitem__(self, idx: int) -> dict[str, torch.Tensor]:
+    def __getitem__(self, idx: int) -> GestureSample:
         return {
             "features": self.features[idx],
             "answers": self.answers[idx],
