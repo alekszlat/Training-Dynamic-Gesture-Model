@@ -51,3 +51,4 @@ data/raw/
 data/interim/
 data/processed/
 data/manifests/samples.csv
+data/manifests/recorded_samples.csv
