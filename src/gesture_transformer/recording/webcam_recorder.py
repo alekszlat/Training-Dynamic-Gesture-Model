@@ -13,7 +13,7 @@ from pathlib import Path
 
 import cv2 as cv
 
-from gesture_transformer.recording.config import Config
+from gesture_transformer.recording.recorder_config import RecorderConfig
 
 WINDOW_NAME = "Sample Recording"
 
@@ -32,25 +32,25 @@ RECORDING_HINTS = [
 class WebcamRecorder:
     """Records one take per call as an mp4 under the active split and label."""
 
-    def __init__(self, config: Config):
+    def __init__(self, recorder_config: RecorderConfig):
         """
         Open the webcam.
 
         Args:
-            config: Recording session settings.
+            recorder_config: Recording session settings.
 
         Raises:
             RuntimeError: If the webcam cannot be opened.
         """
 
-        self.config = config
-        self.recorder = cv.VideoCapture(config.webcam_id)
+        self.recorder_config = recorder_config
+        self.recorder = cv.VideoCapture(recorder_config.webcam_id)
         self.start_clicked = False
         self.stop_clicked = False
 
         if not self.recorder.isOpened():
             raise RuntimeError(
-                f"Could not open webcam {config.webcam_id}. "
+                f"Could not open webcam {recorder_config.webcam_id}. "
                 "It may be in use by another program, or the id may be wrong."
             )
 
@@ -71,7 +71,7 @@ class WebcamRecorder:
 
         output_path = self._build_output_path()
 
-        fourcc = cv.VideoWriter_fourcc(*"mp4v")
+        fourcc = cv.VideoWriter.fourcc(*"mp4v")
         writer = cv.VideoWriter(str(output_path), fourcc, fps, (width, height))
 
         try:
@@ -148,7 +148,10 @@ class WebcamRecorder:
             if not success:
                 consecutive_failures += 1
 
-                if consecutive_failures >= self.config.max_consecutive_read_failures:
+                if (
+                    consecutive_failures
+                    >= self.recorder_config.max_consecutive_read_failures
+                ):
                     print("Camera stopped returning frames, ending take.")
                     break
 
@@ -222,7 +225,7 @@ class WebcamRecorder:
             Preview width and height in pixels.
         """
 
-        scale = self.config.preview_scale
+        scale = self.recorder_config.preview_scale
         width = self.recorder.get(cv.CAP_PROP_FRAME_WIDTH) * scale
         height = self.recorder.get(cv.CAP_PROP_FRAME_HEIGHT) * scale
 
@@ -241,11 +244,11 @@ class WebcamRecorder:
 
         fps = self.recorder.get(cv.CAP_PROP_FPS)
 
-        if not 1.0 <= fps <= self.config.max_fps:
+        if not 1.0 <= fps <= self.recorder_config.max_fps:
             print(
-                f"Camera reported fps={fps}, using {self.config.default_fps} instead."
+                f"Camera reported fps={fps}, using {self.recorder_config.default_fps} instead."
             )
-            return self.config.default_fps
+            return self.recorder_config.default_fps
 
         return fps
 
@@ -260,12 +263,18 @@ class WebcamRecorder:
             ValueError: If no active label is set.
         """
 
-        if self.config.active_label is None:
-            raise ValueError("Config.active_label must be set before recording.")
+        if self.recorder_config.active_label is None:
+            raise ValueError(
+                "recorder_config.active_label must be set before recording."
+            )
 
-        label = self.config.active_label.value
+        label = self.recorder_config.active_label.value
 
-        output_dir = self.config.output_dir / self.config.active_split.value / label
+        output_dir = (
+            self.recorder_config.output_dir
+            / self.recorder_config.active_split.value
+            / label
+        )
         output_dir.mkdir(parents=True, exist_ok=True)
 
         # Using a count is cleaner but difficult to maintain with deletions.

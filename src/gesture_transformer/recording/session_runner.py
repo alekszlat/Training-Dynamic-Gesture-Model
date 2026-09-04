@@ -10,11 +10,11 @@ Author:
 
 from pathlib import Path
 
-from gesture_transformer.recording.config import Config
 from gesture_transformer.recording.metadata_appender import (
     MetadataAppender,
     TakeRecord,
 )
+from gesture_transformer.recording.recorder_config import RecorderConfig
 from gesture_transformer.recording.take_validator import (
     TakeValidationResult,
     TakeValidator,
@@ -27,7 +27,7 @@ class SessionRunner:
 
     def __init__(
         self,
-        config: Config,
+        recorder_config: RecorderConfig,
         recorder: WebcamRecorder,
         validator: TakeValidator,
         metadata_appender: MetadataAppender,
@@ -36,13 +36,13 @@ class SessionRunner:
         Store the settings and the collaborators used during a session.
 
         Args:
-            config: Recording session settings.
+            recorder_config: Recording session settings.
             recorder: Recorder owning the camera and the preview window.
             validator: Checker run over each finished take.
             metadata_appender: Appends the session's takes to the manifest.
         """
 
-        self.config = config
+        self.recorder_config = recorder_config
         self.recorder = recorder
         self.validator = validator
         self.metadata_appender = metadata_appender
@@ -74,6 +74,13 @@ class SessionRunner:
             None.
         """
 
+        label = self.recorder_config.active_label
+
+        if label is None:
+            raise ValueError(
+                "recorder_config.active_label must be set before recording."
+            )
+
         take_path = self.recorder.start_recording()
         result = self.validator.validate(take_path)
 
@@ -84,7 +91,7 @@ class SessionRunner:
         self.records.append(
             TakeRecord(
                 path=take_path,
-                label=self.config.active_label.value,
+                label=label.value,
                 landmarks=result.landmarks,
                 total_frames=result.total_frames,
                 detected_frames=result.detected_frames,

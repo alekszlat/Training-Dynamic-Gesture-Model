@@ -17,9 +17,9 @@ from gesture_transformer.datasets.landmark_extraction.landmark_saver import (
 )
 from gesture_transformer.datasets.readers.video_reader import VideoReader
 from gesture_transformer.recording import (
-    Config,
     Label,
     MetadataAppender,
+    RecorderConfig,
     SessionRunner,
     Split,
     TakeValidator,
@@ -30,21 +30,23 @@ if __name__ == "__main__":
     LABEL = Label.SWIPING_RIGHT
     SPLIT = Split.TRAIN
 
-    config = Config(active_label=LABEL, active_split=SPLIT)
+    recorder_config = RecorderConfig(active_label=LABEL, active_split=SPLIT)
 
-    landmark_extractor = LandmarkExtractor(model_path=config.model_path)
+    landmark_extractor = LandmarkExtractor(
+        model_path=recorder_config.model_path, delegate=recorder_config.delegate
+    )
 
     runner = SessionRunner(
-        config=config,
-        recorder=WebcamRecorder(config),
+        recorder_config=recorder_config,
+        recorder=WebcamRecorder(recorder_config),
         validator=TakeValidator(
-            config=config,
+            recorder_config=recorder_config,
             landmark_extractor=landmark_extractor,
             video_reader=VideoReader(),
         ),
         metadata_appender=MetadataAppender(
-            config=config,
-            landmark_saver=LandmarkSaver(landmarks_dir=config.landmarks_dir),
+            recorder_config=recorder_config,
+            landmark_saver=LandmarkSaver(landmarks_dir=recorder_config.landmarks_dir),
         ),
     )
 

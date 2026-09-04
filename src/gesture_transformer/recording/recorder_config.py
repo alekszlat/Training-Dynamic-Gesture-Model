@@ -12,10 +12,22 @@ from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 
-from gesture_transformer.datasets.manifest.manifest_combiner import SUPPORTED_LABELS
+from mediapipe.tasks.python.core.base_options import BaseOptions
+
+from config import (
+    LANDMARK_DELEGATE,
+    LANDMARK_OUTPUT_DIR,
+    MEDIAPIPE_MODEL_PATH,
+    PROCESSED_DIR,
+    PROJECT_ROOT,
+    SAMPLES_DIR_RECORDED,
+    SUPPORTED_LABELS,
+)
 
 # Sorted so member order matches the class indices LabelEncoder assigns.
-Label = Enum(
+# mypy cannot read members off the functional Enum form, so Label.SWIPING_RIGHT
+# and friends are unchecked. Kept dynamic so the labels live in config.py only.
+Label = Enum(  # type: ignore[misc]
     value="Label",
     names={
         label.upper(): label  # key: value
@@ -33,7 +45,7 @@ class Split(Enum):
 
 
 @dataclass
-class Config:
+class RecorderConfig:
     """
     Settings for one recording session.
 
@@ -47,6 +59,7 @@ class Config:
         min_frames: Fewest frames a take may have and still be usable.
         min_detection_rate: Lowest fraction of frames with a detected hand, 0 to 1.
         model_path: MediaPipe hand landmarker model used to check takes.
+        delegate: MediaPipe inference backend used to check takes.
         webcam_id: Index of the camera to open.
         preview_scale: How much larger than the camera frame the preview window is.
         default_fps: Frame rate used when the camera reports an implausible one.
@@ -54,15 +67,16 @@ class Config:
         max_consecutive_read_failures: Failed reads in a row before a take ends.
     """
 
-    output_dir: Path = Path("data/raw/recorded")
+    output_dir: Path = SAMPLES_DIR_RECORDED
     active_split: Split = Split.TRAIN
-    manifest_path: Path = Path("data/manifests/recorded_samples.csv")
-    metadata_path: Path = Path("data/processed/recorded_metadata.csv")
-    landmarks_dir: Path = Path("data/interim/landmarks/recorded")
+    manifest_path: Path = PROJECT_ROOT / "data" / "manifests" / "recorded_samples.csv"
+    metadata_path: Path = PROCESSED_DIR / "recorded_metadata.csv"
+    landmarks_dir: Path = LANDMARK_OUTPUT_DIR / "recorded"
     active_label: Label | None = None
     min_frames: int = 40
     min_detection_rate: float = 0.5
-    model_path: Path = Path("src/gesture_transformer/models/hand_landmarker.task")
+    model_path: Path = MEDIAPIPE_MODEL_PATH
+    delegate: BaseOptions.Delegate = LANDMARK_DELEGATE
     webcam_id: int = 0
     preview_scale: float = 1.5
     default_fps: float = 30.0

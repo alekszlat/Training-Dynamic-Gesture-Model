@@ -23,7 +23,7 @@ from gesture_transformer.datasets.landmark_extraction.metadata_writer import (
     MetadataRecord,
 )
 from gesture_transformer.datasets.manifest.label_mapper import LabelMapper
-from gesture_transformer.recording.config import Config
+from gesture_transformer.recording.recorder_config import RecorderConfig
 
 
 @dataclass(frozen=True)
@@ -57,16 +57,16 @@ class MetadataAppender:
         field.name for field in fields(MetadataRecord)
     ]
 
-    def __init__(self, config: Config, landmark_saver: LandmarkSaver):
+    def __init__(self, recorder_config: RecorderConfig, landmark_saver: LandmarkSaver):
         """
         Store the settings and the saver used to write landmark files.
 
         Args:
-            config: Recording session settings.
+            recorder_config: Recording session settings.
             landmark_saver: Saver for the extracted landmark arrays.
         """
 
-        self.config = config
+        self.recorder_config = recorder_config
         self.landmark_saver = landmark_saver
         self.label_mapper = LabelMapper()
 
@@ -104,15 +104,17 @@ class MetadataAppender:
             )
 
         self._append_rows(
-            self.config.manifest_path, self.MANIFEST_FIELDNAMES, manifest_rows
+            self.recorder_config.manifest_path, self.MANIFEST_FIELDNAMES, manifest_rows
         )
         self._append_rows(
-            self.config.metadata_path, self.METADATA_FIELDNAMES, metadata_rows
+            self.recorder_config.metadata_path, self.METADATA_FIELDNAMES, metadata_rows
         )
 
-        print(f"Appended {len(usable)} takes to {self.config.manifest_path}.")
-        print(f"Appended {len(usable)} takes to {self.config.metadata_path}.")
-        print(f"Saved {len(usable)} landmark files to {self.config.landmarks_dir}.")
+        print(f"Appended {len(usable)} takes to {self.recorder_config.manifest_path}.")
+        print(f"Appended {len(usable)} takes to {self.recorder_config.metadata_path}.")
+        print(
+            f"Saved {len(usable)} landmark files to {self.recorder_config.landmarks_dir}."
+        )
 
     def _build_sample_id(self, take_path: Path) -> str:
         """

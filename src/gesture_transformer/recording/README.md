@@ -57,7 +57,7 @@ gitignored and downloaded separately, same as the batch pipeline.
 
 ## Settings
 
-All settings live in `Config` in `config.py`.
+All settings live in `RecorderConfig` in `recorder_config.py`.
 
 | Setting | Meaning |
 |---|---|
@@ -70,6 +70,7 @@ All settings live in `Config` in `config.py`.
 | `min_frames` | Fewest frames a take may have. |
 | `min_detection_rate` | Lowest share of frames with a hand, 0 to 1. |
 | `model_path` | MediaPipe model used to check takes. |
+| `delegate` | MediaPipe inference backend, GPU or CPU. |
 | `webcam_id` | Which camera to open. |
 | `preview_scale` | How much bigger the preview window is than the frame. |
 | `default_fps` | Fallback when the camera reports nonsense. |

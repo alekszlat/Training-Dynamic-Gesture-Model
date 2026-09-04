@@ -17,7 +17,7 @@ from gesture_transformer.datasets.landmark_extraction.landmark_extractor import 
     LandmarkExtractor,
 )
 from gesture_transformer.datasets.readers.video_reader import VideoReader
-from gesture_transformer.recording.config import Config
+from gesture_transformer.recording.recorder_config import RecorderConfig
 
 
 @dataclass(frozen=True)
@@ -33,11 +33,11 @@ class TakeValidationResult:
 
 
 class TakeValidator:
-    """Decides whether a recorded take is usable, using the thresholds in Config."""
+    """Decides whether a recorded take is usable, using the thresholds in RecorderConfig."""
 
     def __init__(
         self,
-        config: Config,
+        recorder_config: RecorderConfig,
         landmark_extractor: LandmarkExtractor,
         video_reader: VideoReader,
     ):
@@ -45,12 +45,12 @@ class TakeValidator:
         Store the settings and the collaborators used to read a take.
 
         Args:
-            config: Recording session settings.
+            recorder_config: Recording session settings.
             landmark_extractor: Extractor run over the take. The caller closes it.
             video_reader: Reader for the recorded mp4.
         """
 
-        self.config = config
+        self.recorder_config = recorder_config
         self.landmark_extractor = landmark_extractor
         self.video_reader = video_reader
 
@@ -126,13 +126,16 @@ class TakeValidator:
             Whether to keep the take, and why it was rejected if it was not.
         """
 
-        if total_frames < self.config.min_frames:
-            return False, f"only {total_frames} frames, need {self.config.min_frames}"
-
-        if detection_rate < self.config.min_detection_rate:
+        if total_frames < self.recorder_config.min_frames:
             return (
                 False,
-                f"detection rate {detection_rate}, need {self.config.min_detection_rate}",
+                f"only {total_frames} frames, need {self.recorder_config.min_frames}",
+            )
+
+        if detection_rate < self.recorder_config.min_detection_rate:
+            return (
+                False,
+                f"detection rate {detection_rate}, need {self.recorder_config.min_detection_rate}",
             )
 
         return True, ""
