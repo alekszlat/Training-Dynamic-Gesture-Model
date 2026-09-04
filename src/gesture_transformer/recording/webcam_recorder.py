@@ -1,0 +1,283 @@
+"""
+Records single gesture takes from a webcam to disk.
+
+Dependencies:
+    opencv-python: camera capture, preview window, mp4 writing.
+
+Author:
+    Hristo Hristov
+"""
+
+from datetime import datetime
+from pathlib import Path
+
+import cv2 as cv
+
+from gesture_transformer.recording.recorder_config import RecorderConfig
+
+WINDOW_NAME = "Sample Recording"
+
+IDLE_HINTS = [
+    "space / left click  = start take",
+    "q / middle click    = stop take",
+    "e                   = end session",
+]
+
+RECORDING_HINTS = [
+    "RECORDING",
+    "q / middle click = stop take",
+]
+
+
+class WebcamRecorder:
+    """Records one take per call as an mp4 under the active split and label."""
+
+    def __init__(self, recorder_config: RecorderConfig):
+        """
+        Open the webcam.
+
+        Args:
+            recorder_config: Recording session settings.
+
+        Raises:
+            RuntimeError: If the webcam cannot be opened.
+        """
+
+        self.recorder_config = recorder_config
+        self.recorder = cv.VideoCapture(recorder_config.webcam_id)
+        self.start_clicked = False
+        self.stop_clicked = False
+
+        if not self.recorder.isOpened():
+            raise RuntimeError(
+                f"Could not open webcam {recorder_config.webcam_id}. "
+                "It may be in use by another program, or the id may be wrong."
+            )
+
+    def start_recording(self) -> Path:
+        """
+        Record one take until 'q' is pressed.
+
+        The camera stays open so the next take does not pay to reopen it.
+        Call close() when the session is over.
+
+        Returns:
+            Path to the written mp4.
+        """
+
+        fps = self._read_fps()
+        width = int(self.recorder.get(cv.CAP_PROP_FRAME_WIDTH))
+        height = int(self.recorder.get(cv.CAP_PROP_FRAME_HEIGHT))
+
+        output_path = self._build_output_path()
+
+        fourcc = cv.VideoWriter.fourcc(*"mp4v")
+        writer = cv.VideoWriter(str(output_path), fourcc, fps, (width, height))
+
+        try:
+            self._capture_frames(writer)
+        finally:
+            writer.release()
+            cv.destroyAllWindows()
+
+        return output_path
+
+    def wait_for_start(self) -> bool:
+        """
+        Show a live preview until the user starts the next take or ends the session.
+
+        Returns:
+            True to record the next take, False to end the session.
+        """
+
+        print("Space to record, 'e' to end the session.")
+
+        # Created before the loop so waitKey has a window to read keys from even
+        # while the camera is still warming up, and raised so it takes focus.
+        cv.namedWindow(WINDOW_NAME, cv.WINDOW_NORMAL)
+        cv.resizeWindow(WINDOW_NAME, *self._preview_size())
+        cv.setWindowProperty(WINDOW_NAME, cv.WND_PROP_TOPMOST, 1)
+        cv.setMouseCallback(WINDOW_NAME, self._on_mouse)
+
+        self.start_clicked = False
+
+        while True:
+            success, frame = self.recorder.read()
+
+            if success:
+                self._draw_hints(frame, IDLE_HINTS, (0, 255, 0))
+                cv.imshow(WINDOW_NAME, frame)
+
+            key = cv.waitKey(1)  # ms
+
+            if key == ord(" ") or self.start_clicked:
+                return True
+
+            if key == ord("e"):
+                cv.destroyAllWindows()
+                return False
+
+    def close(self) -> None:
+        """
+        Release the camera. Safe to call more than once.
+
+        Returns:
+            None.
+        """
+
+        if self.recorder.isOpened():
+            self.recorder.release()
+
+    def _capture_frames(self, writer: cv.VideoWriter) -> None:
+        """
+        Write camera frames until the user quits or the camera stops responding.
+
+        Args:
+            writer: Open video writer for the current take.
+
+        Returns:
+            None.
+        """
+
+        consecutive_failures = 0
+        self.stop_clicked = False
+
+        while True:
+            success, frame = self.recorder.read()
+
+            if not success:
+                consecutive_failures += 1
+
+                if (
+                    consecutive_failures
+                    >= self.recorder_config.max_consecutive_read_failures
+                ):
+                    print("Camera stopped returning frames, ending take.")
+                    break
+
+                continue
+
+            consecutive_failures = 0
+
+            writer.write(frame)
+
+            preview = frame.copy()
+            self._draw_hints(preview, RECORDING_HINTS, (0, 0, 255))
+            cv.imshow(WINDOW_NAME, preview)
+
+            key = cv.waitKey(1)  # ms
+
+            if key == ord("q") or self.stop_clicked:
+                break
+
+    def _on_mouse(self, event: int, x: int, y: int, flags: int, param: object) -> None:
+        """
+        Record clicks on the preview window so takes can run without the keyboard.
+
+        Using the mouse leaves the recording hand free to change body position and
+        distance between takes.
+
+        Args:
+            event: OpenCV mouse event code.
+            x: Cursor column. Unused.
+            y: Cursor row. Unused.
+            flags: Event flags. Unused.
+            param: Callback data. Unused.
+
+        Returns:
+            None.
+        """
+
+        if event == cv.EVENT_LBUTTONDOWN:
+            self.start_clicked = True
+        elif event == cv.EVENT_MBUTTONDOWN:
+            self.stop_clicked = True
+
+    def _draw_hints(self, frame, lines: list[str], colour: tuple) -> None:
+        """
+        Draw the control legend onto a preview frame.
+
+        Args:
+            frame: Frame to draw on, modified in place.
+            lines: Legend lines, top to bottom.
+            colour: BGR colour for the text.
+
+        Returns:
+            None.
+        """
+
+        for index, line in enumerate(lines):
+            cv.putText(
+                frame,
+                line,
+                (10, 30 + index * 26),
+                cv.FONT_HERSHEY_SIMPLEX,
+                0.6,
+                colour,
+                2,
+            )
+
+    def _preview_size(self) -> tuple[int, int]:
+        """
+        Scale the camera frame size up for the preview window.
+
+        Returns:
+            Preview width and height in pixels.
+        """
+
+        scale = self.recorder_config.preview_scale
+        width = self.recorder.get(cv.CAP_PROP_FRAME_WIDTH) * scale
+        height = self.recorder.get(cv.CAP_PROP_FRAME_HEIGHT) * scale
+
+        return int(width), int(height)
+
+    def _read_fps(self) -> float:
+        """
+        Report the camera frame rate, falling back to a default when it lies.
+
+        A bad rate gives the file a broken timebase, which distorts the frame
+        count the take is judged on.
+
+        Returns:
+            Frames per second to write the take at.
+        """
+
+        fps = self.recorder.get(cv.CAP_PROP_FPS)
+
+        if not 1.0 <= fps <= self.recorder_config.max_fps:
+            print(
+                f"Camera reported fps={fps}, using {self.recorder_config.default_fps} instead."
+            )
+            return self.recorder_config.default_fps
+
+        return fps
+
+    def _build_output_path(self) -> Path:
+        """
+        Build a unique path for this take and create its folder.
+
+        Returns:
+            Path to write the take to.
+
+        Raises:
+            ValueError: If no active label is set.
+        """
+
+        if self.recorder_config.active_label is None:
+            raise ValueError(
+                "recorder_config.active_label must be set before recording."
+            )
+
+        label = self.recorder_config.active_label.value
+
+        output_dir = (
+            self.recorder_config.output_dir
+            / self.recorder_config.active_split.value
+            / label
+        )
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        # Using a count is cleaner but difficult to maintain with deletions.
+        timestamp = datetime.now().astimezone().strftime("%Y%m%d_%H%M%S_%f")
+
+        return output_dir / f"{label}_{timestamp}.mp4"
