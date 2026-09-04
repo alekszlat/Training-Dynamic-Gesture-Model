@@ -31,13 +31,17 @@ class LandmarkExtractor:
     def __init__(
         self,
         model_path: Path,
+        delegate,
         num_hands: int = 1,
         min_detection_confidence: float = 0.5,
         min_presence_confidence: float = 0.5,
         min_tracking_confidence: float = 0.5,
-    ) -> None:
+    ):
         options = HandLandmarkerOptions(
-            base_options=BaseOptions(model_asset_path=str(model_path)),
+            base_options=BaseOptions(
+                model_asset_path=str(model_path),
+                delegate=delegate,
+            ),
             running_mode=VisionRunningMode.IMAGE,
             num_hands=num_hands,
             min_hand_detection_confidence=min_detection_confidence,

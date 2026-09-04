@@ -10,4 +10,5 @@ This directory contains the accepted architecture and modelling decisions for th
 - [ADR-0006: Use wrist-relative landmarks and frame deltas as model features](0006-use-wrist-relative-landmarks-and-frame-deltas.md)
 - [ADR-0007: Reject samples with insufficient hand detection](0007-reject-low-detection-samples.md)
 - [ADR-0008: Use mypy for static type checking](0008-use-mypy-for-static-type-checking.md)
+- [ADR-0009: Use a PyTorch Transformer encoder training pipeline](0009-use-pytorch-transformer-encoder-training-pipeline.md)
 - [ADR-0010: Record gesture samples with a local tool that hands over landmarks](0010-record-gesture-samples-with-a-local-recording-tool.md)
