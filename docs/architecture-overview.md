@@ -27,15 +27,23 @@ Outside the project are the user interface, live camera handling, MediaPipe itse
 - The project is implemented in Python and uses PyTorch for model development and training.
 - Dataset stages communicate through files rather than directly calling the next stage.
 - The project uses both locally recorded gesture samples and selected samples from the Jester dataset.
-- Only the gestures supported by the project are included in the prepared dataset.
+- Only the gestures in the current pipeline configuration are included in the
+  prepared dataset.
 
-Current supported gesture classes are:
+The current label set is a development/testing configuration used to exercise
+the data pipeline and Transformer training workflow. The final production
+gesture vocabulary has not yet been selected and may change as the application
+requirements are finalized.
 
-- `swiping_up`
-- `swiping_down`
+Current development/testing gesture labels are:
+
 - `swiping_left`
 - `swiping_right`
+- `swiping_up`
+- `swiping_down`
 - `click`
+- `doing_other_things`
+- `no_gesture`
 
 ---
 

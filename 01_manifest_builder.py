@@ -1,5 +1,9 @@
-from pathlib import Path
-
+from config import (
+    SAMPLES_DIR_JESTER,
+    SAMPLES_DIR_RECORDED,
+    SAMPLES_MANIFEST_PATH,
+    SUPPORTED_LABELS,
+)
 from gesture_transformer.datasets.manifest.jester_manifest_builder import (
     JesterManifestBuilder,
 )
@@ -9,18 +13,16 @@ from gesture_transformer.datasets.manifest.recorded_manifest_builder import (
 )
 
 if __name__ == "__main__":
-    samples_dir = Path("data/raw/recorded")
-    builder = RecordedManifestBuilder(samples_dir)
+    builder = RecordedManifestBuilder(SAMPLES_DIR_RECORDED)
     recorded_manifest = builder.build()
 
-    samples_dir = Path("data/raw/jester/20bn-jester-v1")
-    builder = JesterManifestBuilder(samples_dir)
+    builder = JesterManifestBuilder(SAMPLES_DIR_JESTER)
     jester_manifest = builder.build()
 
-    output_path = Path("data/manifests/samples.csv")
-
-    combiner = ManifestCombiner(recorded_manifest, jester_manifest, output_path)
+    combiner = ManifestCombiner(
+        recorded_manifest, jester_manifest, SAMPLES_MANIFEST_PATH, SUPPORTED_LABELS
+    )
     if combiner.build_manifest():
-        print(f"Combined manifest saved to {output_path}")
+        print(f"Combined manifest saved to {SAMPLES_MANIFEST_PATH}")
     else:
         print("Failed to build combined manifest due to invalid rows.")

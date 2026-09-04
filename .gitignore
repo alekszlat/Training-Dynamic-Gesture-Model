@@ -29,7 +29,7 @@ data/processed/*
 # Model files
 *.pt
 *.pth
-checkpoints/
+outputs/checkpoints
 
 # Generated outputs
 outputs/*

@@ -39,7 +39,12 @@ def test_build_manifest_rejects_the_whole_batch_when_any_row_is_invalid(tmp_path
     missing_file = _row(tmp_path, "missing", exists=False)
     output_path = tmp_path / "manifest.csv"
 
-    combiner = ManifestCombiner([good], [missing_file], output_path)
+    combiner = ManifestCombiner(
+        [good],
+        [missing_file],
+        output_path,
+        supported_labels={"click"},
+    )
 
     assert combiner.build_manifest() is False
     assert not output_path.exists()
@@ -51,7 +56,12 @@ def test_build_manifest_merges_valid_rows_from_both_sources(tmp_path):
     jester = _row(tmp_path, "jester_1", label="swiping_left")
     output_path = tmp_path / "manifest.csv"
 
-    combiner = ManifestCombiner([recorded], [jester], output_path)
+    combiner = ManifestCombiner(
+        [recorded],
+        [jester],
+        output_path,
+        supported_labels={"click", "swiping_left"},
+    )
 
     assert combiner.build_manifest() is True
 
