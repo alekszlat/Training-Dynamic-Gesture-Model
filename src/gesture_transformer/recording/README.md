@@ -61,6 +61,7 @@ All settings live in `RecorderConfig` in `recorder_config.py`.
 
 | Setting | Meaning |
 |---|---|
+| `project_root` | Folder the csv paths are written relative to. |
 | `output_dir` | Root folder for takes. |
 | `active_split` | Split being recorded into. |
 | `manifest_path` | Manifest takes are appended to. |

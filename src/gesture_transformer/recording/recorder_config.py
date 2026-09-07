@@ -50,6 +50,7 @@ class RecorderConfig:
     Settings for one recording session.
 
     Attributes:
+        project_root: Folder the csv paths are written relative to.
         output_dir: Root folder takes are written under.
         active_split: Split the current takes belong to.
         manifest_path: Manifest the session's takes are appended to.
@@ -67,6 +68,7 @@ class RecorderConfig:
         max_consecutive_read_failures: Failed reads in a row before a take ends.
     """
 
+    project_root: Path = PROJECT_ROOT
     output_dir: Path = SAMPLES_DIR_RECORDED
     active_split: Split = Split.TRAIN
     manifest_path: Path = PROJECT_ROOT / "data" / "manifests" / "recorded_samples.csv"

@@ -133,6 +133,27 @@ class MetadataAppender:
 
         return f"recorded_{take_path.stem}"
 
+    def _format_path(self, path: Path) -> str:
+        """
+        Format a path for the csv files.
+
+        Paths are written relative to the project root so a metadata file stays
+        readable on the machine it is handed to. An absolute path would point
+        into the recorder's home directory and resolve to nothing there.
+
+        Args:
+            path: Path to format.
+
+        Returns:
+            Project-relative posix path, or the path as given if it lies
+            outside the project.
+        """
+
+        try:
+            return path.relative_to(self.recorder_config.project_root).as_posix()
+        except ValueError:
+            return path.as_posix()
+
     def _build_manifest_row(self, record: TakeRecord, sample_id: str) -> dict[str, str]:
         """
         Turn one take into a manifest row.
@@ -152,7 +173,7 @@ class MetadataAppender:
             "external_id": "",
             "label": self.label_mapper.converter_label(record.label),
             "raw_label": record.label,
-            "path": record.path.as_posix(),
+            "path": self._format_path(record.path),
         }
 
     def _build_metadata_row(
@@ -179,12 +200,12 @@ class MetadataAppender:
             source_name="recorded",
             label=self.label_mapper.converter_label(record.label),
             raw_label=record.label,
-            path=record.path.as_posix(),
+            path=self._format_path(record.path),
             total_frames=record.total_frames,
             detected_frames=record.detected_frames,
             detection_rate=record.detection_rate,
             status="ok",
-            landmark_path=str(landmark_path),
+            landmark_path=self._format_path(landmark_path),
             error="",
         )
 
