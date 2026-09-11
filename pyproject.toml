@@ -36,3 +36,6 @@ ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# C3/F5: the repo root holds config.py, which tests/ imports. Declaring it here
+# keeps the tests from mutating sys.path at import time (leaked global state).
+pythonpath = ["."]

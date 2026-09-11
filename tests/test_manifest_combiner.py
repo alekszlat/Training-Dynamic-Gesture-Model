@@ -14,12 +14,21 @@ from pathlib import Path
 
 from gesture_transformer.datasets.manifest.manifest_combiner import ManifestCombiner
 
+RECORDED_LABEL = "click"
+JESTER_LABEL = "swiping_left"
+SUPPORTED_LABELS = {RECORDED_LABEL, JESTER_LABEL}
 
-def _row(
-    tmp_path: Path, sample_id: str, label: str = "click", exists: bool = True
-) -> dict:
+
+def make_row(
+    tmp_path: Path,
+    sample_id: str,
+    label: str = RECORDED_LABEL,
+    file_exists: bool = True,
+) -> dict[str, str]:
+    """Build one manifest row, overriding only what a test cares about."""
     path = tmp_path / f"{sample_id}.mp4"
-    if exists:
+
+    if file_exists:
         path.touch()
 
     return {
@@ -33,39 +42,47 @@ def _row(
     }
 
 
-def test_build_manifest_rejects_the_whole_batch_when_any_row_is_invalid(tmp_path):
-    """A single bad row (e.g. a missing file) must fail the whole build, not just be dropped."""
-    good = _row(tmp_path, "good")
-    missing_file = _row(tmp_path, "missing", exists=False)
-    output_path = tmp_path / "manifest.csv"
+def read_manifest_rows(output_path: Path) -> list[dict[str, str]]:
+    """Read the manifest CSV the combiner wrote back into rows."""
+    with output_path.open(newline="", encoding="utf-8") as csvfile:
+        return list(csv.DictReader(csvfile))
 
+
+def test_build_manifest_rejects_the_whole_batch_when_any_row_is_invalid(tmp_path):
+    # arrange
+    good = make_row(tmp_path, "good")
+    missing_file = make_row(tmp_path, "missing", file_exists=False)
+    output_path = tmp_path / "manifest.csv"
     combiner = ManifestCombiner(
-        [good],
-        [missing_file],
-        output_path,
-        supported_labels={"click"},
+        recorded_list=[good],
+        jester_list=[missing_file],
+        output_path=output_path,
+        supported_labels=SUPPORTED_LABELS,
     )
 
-    assert combiner.build_manifest() is False
+    # act
+    built = combiner.build_manifest()
+
+    # assert
+    assert built is False
     assert not output_path.exists()
 
 
 def test_build_manifest_merges_valid_rows_from_both_sources(tmp_path):
-    """Recorded and jester rows should end up combined in one CSV when everything validates."""
-    recorded = _row(tmp_path, "rec_1", label="click")
-    jester = _row(tmp_path, "jester_1", label="swiping_left")
+    # arrange
+    recorded = make_row(tmp_path, "rec_1", label=RECORDED_LABEL)
+    jester = make_row(tmp_path, "jester_1", label=JESTER_LABEL)
     output_path = tmp_path / "manifest.csv"
-
     combiner = ManifestCombiner(
-        [recorded],
-        [jester],
-        output_path,
-        supported_labels={"click", "swiping_left"},
+        recorded_list=[recorded],
+        jester_list=[jester],
+        output_path=output_path,
+        supported_labels=SUPPORTED_LABELS,
     )
 
-    assert combiner.build_manifest() is True
+    # act
+    built = combiner.build_manifest()
 
-    with output_path.open(newline="") as csvfile:
-        rows = list(csv.DictReader(csvfile))
-
-    assert {row["sample_id"] for row in rows} == {"rec_1", "jester_1"}
+    # assert
+    assert built is True
+    assert read_manifest_rows(output_path) == [recorded, jester]

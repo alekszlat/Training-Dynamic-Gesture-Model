@@ -8,7 +8,6 @@ These tests verify that the pipeline components respect that configuration:
 - ManifestCombiner keeps labels outside the configured set out of the output.
 - Jester labels are normalized into the project's configured label format.
 - LabelEncoder can encode every configured label into a contiguous class index.
-- The configured labels remain unique and valid.
 
 The tests intentionally do not inspect the numbered root scripts. Those scripts
 act as the composition layer and pass config.SUPPORTED_LABELS into the component
@@ -17,12 +16,9 @@ that validates labels before the manifest reaches disk.
 Author: Hristo Hristov
 """
 
-import sys
-from pathlib import Path
+import csv
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
-if str(REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT))
+import pytest
 
 from config import SUPPORTED_LABELS
 from gesture_transformer.datasets.manifest.label_mapper import LabelMapper
@@ -32,59 +28,64 @@ from gesture_transformer.datasets.manifest.recorded_manifest_builder import (
 )
 from gesture_transformer.datasets.tensor_extraction.label_encoder import LabelEncoder
 
+# SUPPORTED_LABELS is a set, so iteration order varies with PYTHONHASHSEED.
+# Everything below works from the sorted form to stay deterministic.
+SORTED_SUPPORTED_LABELS = sorted(SUPPORTED_LABELS)
+UNSUPPORTED_LABEL = "unsupported_gesture"
+VIDEO_FILENAME = "001.mp4"
+JESTER_LABELS = ["Swiping Left", "Swiping Right", "Swiping Up", "Swiping Down"]
 
-def test_supported_labels_are_unique():
-    """Configured gesture classes must not contain duplicate labels."""
 
-    assert len(SUPPORTED_LABELS) == len(set(SUPPORTED_LABELS))
+@pytest.fixture
+def recorded_samples_dir(tmp_path):
+    """A recorded-samples tree with one folder per configured label."""
+    samples_dir = tmp_path / "recorded"
+
+    for label in SORTED_SUPPORTED_LABELS:
+        label_folder = samples_dir / label
+        label_folder.mkdir(parents=True)
+        (label_folder / VIDEO_FILENAME).touch()
+
+    return samples_dir
 
 
-def test_supported_labels_use_internal_label_format():
-    """Configured labels must already use the normalized internal format."""
-
+@pytest.mark.parametrize("label", SORTED_SUPPORTED_LABELS)
+def test_supported_label_is_already_in_internal_format(label):
+    # arrange
     mapper = LabelMapper()
 
-    for label in SUPPORTED_LABELS:
-        assert mapper.converter_label(label) == label, (
-            f"Configured label '{label}' is not in normalized internal format."
-        )
+    # act
+    normalized_label = mapper.converter_label(label)
+
+    # assert
+    assert normalized_label == label
 
 
-def test_recorded_builder_produces_supported_labels(tmp_path):
-    """Recorded folders named after configured classes must produce those labels."""
+def test_recorded_builder_produces_exactly_the_supported_labels(recorded_samples_dir):
+    # arrange
+    builder = RecordedManifestBuilder(samples_dir=recorded_samples_dir)
 
-    samples_dir = tmp_path / "recorded"
-
-    for label in SUPPORTED_LABELS:
-        folder = samples_dir / label
-        folder.mkdir(parents=True)
-        (folder / "001.mp4").touch()
-
-    builder = RecordedManifestBuilder(samples_dir=samples_dir)
-
+    # act
     samples = builder.build()
 
+    # assert
     produced_labels = {sample["label"] for sample in samples}
 
-    assert produced_labels == set(SUPPORTED_LABELS), (
-        "RecordedManifestBuilder did not produce exactly the configured labels. "
-        f"Expected: {set(SUPPORTED_LABELS)}, "
-        f"got: {produced_labels}"
-    )
+    assert produced_labels == set(SUPPORTED_LABELS)
 
 
-def test_combiner_filters_unsupported_recorded_label(tmp_path):
-    """Unsupported recorded labels must not reach the manifest on disk."""
-
+def test_combiner_keeps_an_unsupported_recorded_label_out_of_the_manifest(tmp_path):
+    # arrange
     samples_dir = tmp_path / "recorded"
+    supported_label = SORTED_SUPPORTED_LABELS[0]
 
-    supported_folder = samples_dir / next(iter(SUPPORTED_LABELS))
+    supported_folder = samples_dir / supported_label
     supported_folder.mkdir(parents=True)
-    (supported_folder / "001.mp4").touch()
+    (supported_folder / VIDEO_FILENAME).touch()
 
-    unsupported_folder = samples_dir / "unsupported_gesture"
-    unsupported_folder.mkdir()
-    (unsupported_folder / "001.mp4").touch()
+    unsupported_folder = samples_dir / UNSUPPORTED_LABEL
+    unsupported_folder.mkdir(parents=True)
+    (unsupported_folder / VIDEO_FILENAME).touch()
 
     recorded_samples = RecordedManifestBuilder(samples_dir=samples_dir).build()
     output_path = tmp_path / "manifest.csv"
@@ -95,65 +96,58 @@ def test_combiner_filters_unsupported_recorded_label(tmp_path):
         supported_labels=SUPPORTED_LABELS,
     )
 
-    assert combiner.build_manifest() is True
+    # act
+    built = combiner.build_manifest()
 
-    manifest_text = output_path.read_text(encoding="utf-8")
+    # assert
+    with output_path.open(newline="", encoding="utf-8") as manifest_file:
+        written_labels = {row["label"] for row in csv.DictReader(manifest_file)}
 
-    assert unsupported_folder.name not in manifest_text
-    assert supported_folder.name in manifest_text
+    assert built is True
+    assert written_labels == {supported_label}
 
 
-def test_jester_style_labels_normalize_to_internal_format():
-    """Human-readable Jester labels must normalize to project label format."""
-
+@pytest.mark.parametrize("jester_label", JESTER_LABELS)
+def test_jester_style_label_normalizes_into_a_supported_label(jester_label):
+    # arrange
     mapper = LabelMapper()
 
-    jester_labels = {
-        "Swiping Left",
-        "Swiping Right",
-        "Swiping Up",
-        "Swiping Down",
-    }
+    # act
+    normalized_label = mapper.converter_label(jester_label)
 
-    mapped_labels = {mapper.converter_label(label) for label in jester_labels}
-
-    assert mapped_labels <= set(SUPPORTED_LABELS), (
-        "Jester labels mapped to values outside config.SUPPORTED_LABELS: "
-        f"{mapped_labels - set(SUPPORTED_LABELS)}"
-    )
+    # assert
+    assert normalized_label in SUPPORTED_LABELS
 
 
-def test_label_encoder_supports_all_configured_labels():
-    """Every configured gesture must be encodable by the tensor-building stage."""
+@pytest.mark.parametrize("label", SORTED_SUPPORTED_LABELS)
+def test_label_encoder_round_trips_every_configured_label(label):
+    # arrange
+    encoder = LabelEncoder(SORTED_SUPPORTED_LABELS)
 
-    encoder = LabelEncoder(list(SUPPORTED_LABELS))
+    # act
+    encoded_index = encoder.encode(label)
 
-    encoded_labels = {label: encoder.encode(label) for label in SUPPORTED_LABELS}
-
-    assert set(encoded_labels) == set(SUPPORTED_LABELS)
+    # assert
+    assert encoder.decode(encoded_index) == label
 
 
 def test_label_encoder_produces_contiguous_class_indices():
-    """Class indices must be contiguous from 0 to number_of_classes - 1."""
+    # arrange
+    encoder = LabelEncoder(SORTED_SUPPORTED_LABELS)
 
-    encoder = LabelEncoder(list(SUPPORTED_LABELS))
+    # act
+    indices = {encoder.encode(label) for label in SORTED_SUPPORTED_LABELS}
 
-    indices = {encoder.encode(label) for label in SUPPORTED_LABELS}
-
-    expected_indices = set(range(len(SUPPORTED_LABELS)))
-
-    assert indices == expected_indices, (
-        "LabelEncoder produced non-contiguous class indices. "
-        f"Expected {expected_indices}, got {indices}"
-    )
+    # assert
+    assert indices == set(range(len(SUPPORTED_LABELS)))
 
 
-def test_label_mapping_contains_exactly_supported_labels():
-    """The generated label mapping must contain exactly the configured classes."""
+def test_label_mapping_contains_exactly_the_supported_labels():
+    # arrange
+    encoder = LabelEncoder(SORTED_SUPPORTED_LABELS)
 
-    encoder = LabelEncoder(list(SUPPORTED_LABELS))
-
+    # act
     mapping = encoder.mapping()
 
-    assert set(mapping.keys()) == set(SUPPORTED_LABELS)
-    assert len(mapping) == len(SUPPORTED_LABELS)
+    # assert
+    assert set(mapping) == set(SUPPORTED_LABELS)

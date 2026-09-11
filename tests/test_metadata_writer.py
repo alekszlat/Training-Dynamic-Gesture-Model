@@ -16,8 +16,11 @@ from gesture_transformer.datasets.tensor_extraction.metadata_reader import (
     MetadataReader,
 )
 
+ERROR_WITH_COMMA = "Unknown source_type: bad. Available source types: jester, video"
 
-def _record(error: str) -> MetadataRecord:
+
+def make_record(error: str) -> MetadataRecord:
+    """Build a failed-extraction metadata record, varying only the error text."""
     return MetadataRecord(
         sample_id="s1",
         source_type="video",
@@ -35,10 +38,13 @@ def _record(error: str) -> MetadataRecord:
 
 
 def test_field_containing_a_comma_survives_write_and_read(tmp_path):
-    error_with_comma = "Unknown source_type: bad. Available source types: jester, video"
+    # arrange
+    record = make_record(ERROR_WITH_COMMA)
     metadata_path = tmp_path / "metadata.csv"
 
-    MetadataWriter(metadata_path).write([_record(error_with_comma)])
+    # act
+    MetadataWriter(metadata_path).write([record])
     loaded = MetadataReader(metadata_path)._load_metadata(status="error")
 
-    assert loaded[0].error == error_with_comma
+    # assert
+    assert loaded == [record]
