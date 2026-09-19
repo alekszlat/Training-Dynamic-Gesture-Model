@@ -57,7 +57,6 @@ class GestureDataset(Dataset):
         self.padding_mask = data[padding_mask] == 0
         self.sample_ids = data[sample_ids]
         self.labels = data[label_key]
-        expected_mask_shape = self.features.shape[:2]
 
         if not isinstance(self.features, torch.Tensor):
             raise TypeError(
@@ -77,6 +76,8 @@ class GestureDataset(Dataset):
 
         if not isinstance(self.labels, list):
             raise TypeError(f"Labels must be a list, got {type(self.labels)}")
+
+        expected_mask_shape = self.features.shape[:2]
 
         if self.features.dtype != torch.float32:
             raise TypeError(
