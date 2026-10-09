@@ -1,7 +1,11 @@
+import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import ClassVar
 
+from gesture_transformer.datasets.manifest.builders.manifest_builder import (
+    ManifestAttributes,
+)
 from gesture_transformer.datasets.manifest.label_mapper import LabelMapper
 
 
@@ -18,18 +22,20 @@ class JesterManifestBuilder:
 
     VALID_FRAME_EXTENSIONS: ClassVar[set[str]] = {".jpg", ".jpeg", ".png"}
 
-    ANNOTATION_FILE = "jester-v1-train.csv"
+    ANNOTATION_FILE = "labeled_data.csv"
 
     def __init__(
         self,
+        data_location: str,
         samples_dir: Path,
         project_root: Path | None = None,
     ):
+        self.data_location = data_location
         self.samples_dir = samples_dir
         self.project_root = project_root
         self.label_mapper = LabelMapper()
 
-    def build(self) -> list[dict[str, str]]:
+    def build(self) -> list[ManifestAttributes]:
         """
         Build manifest rows for supported Jester gesture samples.
 
@@ -37,7 +43,7 @@ class JesterManifestBuilder:
 
             20bn-jester-v1/
               annotations/
-                jester-v1-train.csv
+                DATA_LABELED.csv
               frames/
                 1/
                   00001.jpg
@@ -48,37 +54,34 @@ class JesterManifestBuilder:
 
         annotations = self._read_all_annotations()
 
-        samples: list[dict[str, str]] = []
+        samples: list[ManifestAttributes] = []
         sample_index = 1
 
         for annotation in annotations:
             internal_label = self.label_mapper.converter_label(annotation.raw_label)
-
             if internal_label is None:
                 continue
 
             frame_folder = self._create_frame_folder_path(annotation.external_id)
-
-            if not frame_folder.is_dir():
+            if self.data_location == "local" and not self._has_frames(frame_folder):
                 continue
 
-            if not self._has_frames(frame_folder):
-                continue
-
-            sample_id = f"jester_{sample_index:06d}"
+            if self.data_location == "local":
+                sample_id = f"in_jester_{sample_index:06d}"
+            else:
+                sample_id = f"ex_jester_{sample_index:06d}"
 
             samples.append(
-                {
-                    "sample_id": sample_id,
-                    "source_type": "jester",
-                    "source_name": "jester",
-                    "external_id": annotation.external_id,
-                    "label": internal_label,
-                    "raw_label": annotation.raw_label,
-                    "path": self._format_path(frame_folder),
-                }
+                ManifestAttributes(
+                    sample_id=sample_id,
+                    source_type="jester",
+                    source_name="jester",
+                    external_id=annotation.external_id,
+                    label=internal_label,
+                    raw_label=annotation.raw_label,
+                    path=self._format_path(frame_folder),
+                )
             )
-
             sample_index += 1
 
         return samples
@@ -139,14 +142,20 @@ class JesterManifestBuilder:
 
         return self.samples_dir / "frames" / external_id
 
-    def _has_frames(self, frame_folder: Path) -> bool:
-        """Check whether a Jester frame folder contains valid frame images."""
+    def _has_frames(
+        self,
+        frame_folder: Path,
+    ) -> bool:
+        try:
+            with os.scandir(frame_folder) as entries:
+                return any(
+                    entry.is_file()
+                    and Path(entry.name).suffix.lower() in self.VALID_FRAME_EXTENSIONS
+                    for entry in entries
+                )
 
-        return any(
-            file_path.is_file()
-            and file_path.suffix.lower() in self.VALID_FRAME_EXTENSIONS
-            for file_path in frame_folder.iterdir()
-        )
+        except (FileNotFoundError, NotADirectoryError):
+            return False
 
     def _format_path(self, path: Path) -> str:
         """
