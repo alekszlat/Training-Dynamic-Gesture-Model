@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Protocol
 
 
@@ -15,13 +14,4 @@ class ManifestAttributes:
 
 
 class ManifestBuilder(Protocol):
-    def __init__(
-        self,
-        data_location: str,
-        samples_dir: Path,
-        project_root: Path | None = None,
-    ):
-        self.samples_dir = samples_dir
-        self.project_root = project_root
-
     def build(self) -> list[ManifestAttributes]: ...
