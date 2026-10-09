@@ -12,7 +12,7 @@ class ManifestCombiner:
 
     def __init__(
         self,
-        datasets_list: list[ManifestAttributes],
+        datasets_list: list[list[ManifestAttributes]],
         output_path: Path,
         supported_labels: set[str],
     ):
@@ -21,8 +21,9 @@ class ManifestCombiner:
         self.supported_labels = supported_labels
 
     def build_manifest(self) -> bool:
-        combined_manifest = []
+        combined_manifest: list[ManifestAttributes] = []
         counter = 1
+        
         for dataset in self.datasets_list:
             if not dataset:
                 print(f"Dataset_{counter} is empty")
