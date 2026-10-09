@@ -1,8 +1,10 @@
 from pathlib import Path
 from typing import ClassVar
 
+from gesture_transformer.datasets.manifest.builders.manifest_builder import (
+    ManifestAttributes,
+)
 from gesture_transformer.datasets.manifest.label_mapper import LabelMapper
-from gesture_transformer.datasets.manifest.builders.manifest_builder import ManifestAttributes
 
 
 class RecordedManifestBuilder:
@@ -51,7 +53,7 @@ class RecordedManifestBuilder:
             video_files = self._find_video_files(gesture_folder)
 
             for video_path in video_files:
-                if(self.data_location):
+                if self.data_location:
                     sample_id = f"in_recorded_{sample_index:06d}"
                 else:
                     sample_id = f"ex_recorded_{sample_index:06d}"

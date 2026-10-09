@@ -1,11 +1,13 @@
+import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import ClassVar
 
+from gesture_transformer.datasets.manifest.builders.manifest_builder import (
+    ManifestAttributes,
+)
 from gesture_transformer.datasets.manifest.label_mapper import LabelMapper
-from gesture_transformer.datasets.manifest.builders.manifest_builder import ManifestAttributes
 
-import os
 
 @dataclass(frozen=True)
 class JesterAnnotation:
@@ -59,13 +61,12 @@ class JesterManifestBuilder:
             internal_label = self.label_mapper.converter_label(annotation.raw_label)
             if internal_label is None:
                 continue
+
             frame_folder = self._create_frame_folder_path(annotation.external_id)
+            if self.data_location == "local" and not self._has_frames(frame_folder):
+                continue
 
-            if(self.data_location == "local"):
-                if not self._has_frames(frame_folder):
-                    continue
-
-            if(self.data_location == "local"):
+            if self.data_location == "local":
                 sample_id = f"in_jester_{sample_index:06d}"
             else:
                 sample_id = f"ex_jester_{sample_index:06d}"
@@ -82,7 +83,7 @@ class JesterManifestBuilder:
                 )
             )
             sample_index += 1
-        
+
         return samples
 
     def _read_all_annotations(self) -> list[JesterAnnotation]:
@@ -141,7 +142,6 @@ class JesterManifestBuilder:
 
         return self.samples_dir / "frames" / external_id
 
-
     def _has_frames(
         self,
         frame_folder: Path,
@@ -150,8 +150,7 @@ class JesterManifestBuilder:
             with os.scandir(frame_folder) as entries:
                 return any(
                     entry.is_file()
-                    and Path(entry.name).suffix.lower()
-                    in self.VALID_FRAME_EXTENSIONS
+                    and Path(entry.name).suffix.lower() in self.VALID_FRAME_EXTENSIONS
                     for entry in entries
                 )
 
