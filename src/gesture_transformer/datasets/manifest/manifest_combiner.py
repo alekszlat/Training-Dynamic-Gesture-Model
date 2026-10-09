@@ -23,7 +23,7 @@ class ManifestCombiner:
     def build_manifest(self) -> bool:
         combined_manifest: list[ManifestAttributes] = []
         counter = 1
-        
+
         for dataset in self.datasets_list:
             if not dataset:
                 print(f"Dataset_{counter} is empty")
