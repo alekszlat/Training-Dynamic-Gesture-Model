@@ -1,5 +1,10 @@
-import csv
+from csv import DictWriter
+from dataclasses import asdict, fields
 from pathlib import Path
+
+from gesture_transformer.datasets.manifest.builders.manifest_builder import (
+    ManifestAttributes,
+)
 
 
 class ManifestCombiner:
@@ -7,29 +12,37 @@ class ManifestCombiner:
 
     def __init__(
         self,
-        recorded_list: list[dict],
-        jester_list: list[dict],
+        datasets_list: list[ManifestAttributes],
         output_path: Path,
         supported_labels: set[str],
     ):
-        self.recorded_list = recorded_list
-        self.jester_list = jester_list
+        self.datasets_list = datasets_list
         self.output_path = output_path
         self.supported_labels = supported_labels
 
     def build_manifest(self) -> bool:
         combined_manifest = []
-        combined_manifest.extend(self.recorded_list)
-        combined_manifest.extend(self.jester_list)
+        counter = 1
+        for dataset in self.datasets_list:
+            if not dataset:
+                print(f"Dataset_{counter} is empty")
+                counter += 1
+                continue
+
+            combined_manifest.extend(dataset)
+            counter += 1
 
         # Validate combined manifest rows
         validated_manifest = []
         invalid_rows = []
+
+        print("Going over combined list")
         for row in combined_manifest:
             check, message = self._validate_combined_manifest_row(row)
 
             if check:
-                if row["label"] in self.supported_labels:
+                ##print(message)
+                if row.label in self.supported_labels:
                     validated_manifest.append(row)
                 else:
                     continue
@@ -49,66 +62,80 @@ class ManifestCombiner:
 
         return True
 
-    def _validate_combined_manifest_row(self, row: dict) -> tuple[bool, str]:
-        if "sample_id" not in row or not row["sample_id"]:
+    def _validate_combined_manifest_row(
+        self,
+        row: ManifestAttributes,
+    ) -> tuple[bool, str]:
+        if not row.sample_id:
             return False, "missing sample_id"
 
-        if "label" not in row or not row["label"]:
+        if not row.label:
             return False, "missing label"
 
-        if "path" not in row or not row["path"]:
+        if not row.path:
             return False, "missing path"
 
-        if not Path(row["path"]).exists():
+        if not Path(row.path).exists():
             return False, "path does not exist"
 
-        if "source_type" not in row:
+        if not row.source_type:
             return False, "missing source_type"
 
-        if row["source_type"] not in ["video", "jester"]:
+        if row.source_type not in {"video", "jester"}:
             return False, "invalid source_type"
 
         return True, "valid row"
 
-    def save_to_csv(self, manifest: list[dict[str, str]]) -> None:
+    def save_to_csv(
+        self,
+        manifest: list[ManifestAttributes],
+    ) -> None:
         """Save the combined manifest to a CSV file."""
 
         if not manifest:
             print("Warning: No valid manifest rows to save.")
             return
 
-        # Make sure the parent folder exists.
-        self.output_path.parent.mkdir(parents=True, exist_ok=True)
+        self.output_path.parent.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
 
-        fieldnames = [
-            "sample_id",
-            "source_type",
-            "source_name",
-            "external_id",
-            "label",
-            "raw_label",
-            "path",
-        ]
+        fieldnames = [field.name for field in fields(ManifestAttributes)]
 
-        with self.output_path.open(mode="w", encoding="utf-8", newline="") as csvfile:
-            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        with self.output_path.open(
+            mode="w",
+            encoding="utf-8",
+            newline="",
+        ) as csvfile:
+            writer = DictWriter(
+                csvfile,
+                fieldnames=fieldnames,
+            )
+
             writer.writeheader()
-            writer.writerows(manifest)
+
+            writer.writerows(asdict(row) for row in manifest)
 
         print(f"Saved manifest to: {self.output_path}")
 
-    def print_manifest_summary(self, manifest: list[dict[str, str]]) -> None:
+    def print_manifest_summary(
+        self,
+        manifest: list[ManifestAttributes],
+    ) -> None:
         """Print a summary of the combined manifest."""
 
         total_samples = len(manifest)
         label_counts: dict[str, int] = {}
 
         for row in manifest:
-            label = row.get("label")
+            label = row.label
+
             if label:
                 label_counts[label] = label_counts.get(label, 0) + 1
 
         print(f"Total samples in combined manifest: {total_samples}")
         print("Sample counts by label:")
+
         for label, count in label_counts.items():
             print(f"  {label}: {count}")

@@ -49,8 +49,15 @@ PROCESSED_DIR = PROJECT_ROOT / "data" / "processed"
 # └── click/
 SAMPLES_DIR_RECORDED = PROJECT_ROOT / "data" / "raw" / "recorded"
 
-# Root directory of the Jester dataset used by the project.
-SAMPLES_DIR_JESTER = PROJECT_ROOT / "data" / "raw" / "jester" / "20bn-jester-v1"
+# Root directory of the local Jester dataset used by the project.
+SAMPLES_DIR_IN_JESTER = Path(
+    PROJECT_ROOT / "data" / "raw" / "jester" / "20bn-jester-v1"
+)
+
+# Root directory of the external Jester dataset used by the project.
+SAMPLES_DIR_EX_JESTER = Path(
+    "/run/media/alexanderz/EX-SATA-HDD/data/Jester/20bn-jester-v1"
+)
 
 # Combined manifest produced from the recorded and Jester datasets.
 # This file becomes the input contract for landmark extraction.

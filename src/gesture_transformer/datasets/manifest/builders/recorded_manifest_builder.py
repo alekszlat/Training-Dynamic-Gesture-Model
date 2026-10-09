@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import ClassVar
 
 from gesture_transformer.datasets.manifest.label_mapper import LabelMapper
+from gesture_transformer.datasets.manifest.builders.manifest_builder import ManifestAttributes
 
 
 class RecordedManifestBuilder:
@@ -13,12 +14,14 @@ class RecordedManifestBuilder:
         self,
         samples_dir: Path,
         project_root: Path | None = None,
+        data_location: str = "local",
     ) -> None:
         self.samples_dir = samples_dir
         self.project_root = project_root
+        self.data_location = data_location
         self.label_mapper = LabelMapper()
 
-    def build(self) -> list[dict[str, str]]:
+    def build(self) -> list[ManifestAttributes]:
         """
         Build manifest rows for recorded gesture samples.
 
@@ -37,7 +40,7 @@ class RecordedManifestBuilder:
             A list of dictionaries where each dictionary represents one video sample.
         """
 
-        samples: list[dict[str, str]] = []
+        samples: list[ManifestAttributes] = []
         sample_index = 1
 
         for gesture_folder in sorted(self.samples_dir.iterdir()):
@@ -48,18 +51,21 @@ class RecordedManifestBuilder:
             video_files = self._find_video_files(gesture_folder)
 
             for video_path in video_files:
-                sample_id = f"recorded_{sample_index:06d}"
+                if(self.data_location):
+                    sample_id = f"in_recorded_{sample_index:06d}"
+                else:
+                    sample_id = f"ex_recorded_{sample_index:06d}"
 
                 samples.append(
-                    {
-                        "sample_id": sample_id,
-                        "source_type": "video",
-                        "source_name": "recorded",
-                        "external_id": "",
-                        "label": self.label_mapper.converter_label(label),
-                        "raw_label": label,
-                        "path": self._format_path(video_path),
-                    }
+                    ManifestAttributes(
+                        sample_id=sample_id,
+                        source_type="video",
+                        source_name="recorded",
+                        external_id="",
+                        label=self.label_mapper.converter_label(label),
+                        raw_label=label,
+                        path=self._format_path(video_path),
+                    )
                 )
 
                 sample_index += 1
