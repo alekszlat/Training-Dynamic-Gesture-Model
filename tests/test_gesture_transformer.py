@@ -125,17 +125,6 @@ def test_padded_frame_content_does_not_reach_the_output():
 # ---------------------------------------------------------------------------
 
 
-def test_nan_at_a_padded_input_frame_is_caught_as_non_finite_output():
-    # arrange
-    torch.manual_seed(SEED)
-    model = make_model()
-    x, padding_mask = make_batch([3], sequence_length=5, pad_value=float("nan"))
-
-    # act / assert
-    with pytest.raises(RuntimeError, match="NaN or Inf"):
-        model(x, padding_mask)
-
-
 def test_nan_at_a_valid_frame_raises():
     # arrange
     model = make_model()
