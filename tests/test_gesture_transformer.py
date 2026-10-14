@@ -192,3 +192,32 @@ def test_mask_shape_mismatch_raises():
     # act / assert
     with pytest.raises(ValueError, match="must have shape"):
         model(x, wider_mask)
+
+
+# ---------------------------------------------------------------------------
+# Known bugs
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.xfail(
+    reason=(
+        "A NaN in a padded input frame still poisons the encoder and forward "
+        "raises. The desired behaviour is not yet decided: sanitise the input, "
+        "or keep failing loudly."
+    ),
+    strict=True,
+)
+def test_nan_at_a_padded_frame_does_not_affect_the_output():
+    # arrange
+    torch.manual_seed(SEED)
+    model = make_model()
+    zero_padded_x, padding_mask = make_batch([3], sequence_length=5)
+    nan_padded_x, _ = make_batch([3], sequence_length=5, pad_value=float("nan"))
+
+    # act
+    zero_padded_logits = model(zero_padded_x, padding_mask)
+    nan_padded_logits = model(nan_padded_x, padding_mask)
+
+    # assert
+    assert torch.isfinite(nan_padded_logits).all()
+    assert torch.allclose(zero_padded_logits, nan_padded_logits, atol=1e-6)
