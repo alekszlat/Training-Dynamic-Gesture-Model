@@ -12,25 +12,28 @@ Author: Hristo Hristov
 import csv
 from pathlib import Path
 
+from gesture_transformer.datasets.manifest.builders.manifest_builder import (
+    ManifestAttributes,
+)
 from gesture_transformer.datasets.manifest.manifest_combiner import ManifestCombiner
 
 
 def _row(
     tmp_path: Path, sample_id: str, label: str = "click", exists: bool = True
-) -> dict:
+) -> ManifestAttributes:
     path = tmp_path / f"{sample_id}.mp4"
     if exists:
         path.touch()
 
-    return {
-        "sample_id": sample_id,
-        "source_type": "video",
-        "source_name": "unit_test",
-        "external_id": sample_id,
-        "label": label,
-        "raw_label": label,
-        "path": str(path),
-    }
+    return ManifestAttributes(
+        sample_id=sample_id,
+        source_type="video",
+        source_name="unit_test",
+        external_id=sample_id,
+        label=label,
+        raw_label=label,
+        path=str(path),
+    )
 
 
 def test_build_manifest_rejects_the_whole_batch_when_any_row_is_invalid(tmp_path):
@@ -40,8 +43,7 @@ def test_build_manifest_rejects_the_whole_batch_when_any_row_is_invalid(tmp_path
     output_path = tmp_path / "manifest.csv"
 
     combiner = ManifestCombiner(
-        [good],
-        [missing_file],
+        [[good], [missing_file]],
         output_path,
         supported_labels={"click"},
     )
@@ -57,8 +59,7 @@ def test_build_manifest_merges_valid_rows_from_both_sources(tmp_path):
     output_path = tmp_path / "manifest.csv"
 
     combiner = ManifestCombiner(
-        [recorded],
-        [jester],
+        [[recorded], [jester]],
         output_path,
         supported_labels={"click", "swiping_left"},
     )

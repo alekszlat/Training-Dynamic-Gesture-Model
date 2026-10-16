@@ -25,11 +25,11 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from config import SUPPORTED_LABELS
-from gesture_transformer.datasets.manifest.label_mapper import LabelMapper
-from gesture_transformer.datasets.manifest.manifest_combiner import ManifestCombiner
-from gesture_transformer.datasets.manifest.recorded_manifest_builder import (
+from gesture_transformer.datasets.manifest.builders.recorded_manifest_builder import (
     RecordedManifestBuilder,
 )
+from gesture_transformer.datasets.manifest.label_mapper import LabelMapper
+from gesture_transformer.datasets.manifest.manifest_combiner import ManifestCombiner
 from gesture_transformer.datasets.tensor_extraction.label_encoder import LabelEncoder
 
 
@@ -64,7 +64,7 @@ def test_recorded_builder_produces_supported_labels(tmp_path):
 
     samples = builder.build()
 
-    produced_labels = {sample["label"] for sample in samples}
+    produced_labels = {sample.label for sample in samples}
 
     assert produced_labels == set(SUPPORTED_LABELS), (
         "RecordedManifestBuilder did not produce exactly the configured labels. "
@@ -89,8 +89,7 @@ def test_combiner_filters_unsupported_recorded_label(tmp_path):
     recorded_samples = RecordedManifestBuilder(samples_dir=samples_dir).build()
     output_path = tmp_path / "manifest.csv"
     combiner = ManifestCombiner(
-        recorded_list=recorded_samples,
-        jester_list=[],
+        [recorded_samples, []],
         output_path=output_path,
         supported_labels=SUPPORTED_LABELS,
     )
