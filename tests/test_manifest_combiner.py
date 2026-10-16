@@ -27,23 +27,19 @@ def make_row(
     tmp_path: Path,
     sample_id: str,
     label: str = RECORDED_LABEL,
-    source_type: str = "video",
     file_exists: bool = True,
 ) -> ManifestAttributes:
     """Build one manifest row, overriding only what a test cares about."""
-    path = tmp_path / (f"{sample_id}.mp4" if source_type == "video" else sample_id)
+    path = tmp_path / f"{sample_id}.mp4"
 
     if file_exists:
-        if source_type == "video":
-            path.touch()
-        else:
-            path.mkdir()
+        path.touch()
 
     return ManifestAttributes(
         sample_id=sample_id,
-        source_type=source_type,
-        source_name="recorded" if source_type == "video" else "jester",
-        external_id="" if source_type == "video" else sample_id,
+        source_type="video",
+        source_name="unit_test",
+        external_id=sample_id,
         label=label,
         raw_label=label,
         path=str(path),
@@ -59,9 +55,7 @@ def read_manifest_rows(output_path: Path) -> list[dict[str, str]]:
 def test_build_manifest_rejects_the_whole_batch_when_any_row_is_invalid(tmp_path):
     # arrange
     good = make_row(tmp_path, "good")
-    missing_file = make_row(
-        tmp_path, "missing", label=JESTER_LABEL, source_type="jester", file_exists=False
-    )
+    missing_file = make_row(tmp_path, "missing", file_exists=False)
     output_path = tmp_path / "manifest.csv"
     combiner = ManifestCombiner(
         datasets_list=[[good], [missing_file]],
@@ -80,7 +74,7 @@ def test_build_manifest_rejects_the_whole_batch_when_any_row_is_invalid(tmp_path
 def test_build_manifest_merges_valid_rows_from_both_sources(tmp_path):
     # arrange
     recorded = make_row(tmp_path, "rec_1", label=RECORDED_LABEL)
-    jester = make_row(tmp_path, "jester_1", label=JESTER_LABEL, source_type="jester")
+    jester = make_row(tmp_path, "jester_1", label=JESTER_LABEL)
     output_path = tmp_path / "manifest.csv"
     combiner = ManifestCombiner(
         datasets_list=[[recorded], [jester]],
