@@ -5,13 +5,19 @@ for both successful and failing samples, and always releases the landmark
 extractor, using fakes in place of the manifest, reader and mediapipe
 dependencies.
 
+The fakes are checked against the real classes they stand in for (U23). A fake
+whose interface drifts from the real one keeps every test in this file green
+while production breaks, and nothing else in the suite would notice.
+
 Author: Hristo Hristov
 """
 
 import csv
+import inspect
 from pathlib import Path
 
 import numpy as np
+import pytest
 
 from gesture_transformer.datasets.landmark_extraction.landmark_extraction_pipeline import (
     LandmarkExtractionPipeline,
@@ -30,9 +36,19 @@ from gesture_transformer.datasets.manifest.sample_manifest_reader import (
     SampleManifestReader,
     SampleRecord,
 )
+from gesture_transformer.datasets.readers.base_reader import (
+    FrameReader,
+)
 from gesture_transformer.datasets.readers.reader_factory import (
     ReaderFactory,
 )
+
+METADATA_FILENAME = "metadata.csv"
+LANDMARKS_DIRNAME = "landmarks"
+GOOD_SOURCE_TYPE = "good_source"
+BAD_SOURCE_TYPE = "bad_source"
+FRAME_COUNT = 5
+READER_FAILURE_MESSAGE = "cannot open file"
 
 
 class FakeManifestReader(SampleManifestReader):
@@ -93,65 +109,207 @@ class FakeLandmarkExtractor(LandmarkExtractor):
         self.closed = True
 
 
-def test_pipeline_writes_metadata_and_survives_per_sample_failures(tmp_path: Path):
-    """Run the pipeline over a successful and a failing sample and verify the metadata output."""
-    good_sample = SampleRecord(
-        sample_id="sample_good",
-        source_type="good_source",
-        source_name="unit_test",
-        external_id="1",
-        label="0",
-        raw_label="swipe_left",
-        path=Path("good.mp4"),
+def make_sample(**overrides) -> SampleRecord:
+    """Build a SampleRecord, overriding only the fields a test cares about."""
+    fields = {
+        "sample_id": "sample_good",
+        "source_type": GOOD_SOURCE_TYPE,
+        "source_name": "unit_test",
+        "external_id": "1",
+        "label": "0",
+        "raw_label": "swipe_left",
+        "path": Path("good.mp4"),
+    }
+
+    return SampleRecord(**{**fields, **overrides})
+
+
+def make_pipeline(
+    tmp_path: Path,
+    samples: list[SampleRecord],
+    landmark_extractor: FakeLandmarkExtractor,
+) -> LandmarkExtractionPipeline:
+    """Build a pipeline wired to fakes, writing its output under tmp_path."""
+    readers_by_source_type = {
+        GOOD_SOURCE_TYPE: FakeFrameReader(
+            frames=[np.zeros((4, 4, 3), dtype=np.uint8)] * FRAME_COUNT
+        ),
+        BAD_SOURCE_TYPE: FakeFrameReader(error=RuntimeError(READER_FAILURE_MESSAGE)),
+    }
+
+    return LandmarkExtractionPipeline(
+        manifest_reader=FakeManifestReader(samples),
+        reader_factory=FakeReaderFactory(readers_by_source_type),
+        landmark_extractor=landmark_extractor,
+        landmark_saver=LandmarkSaver(tmp_path / LANDMARKS_DIRNAME),
+        metadata_writer=MetadataWriter(tmp_path / METADATA_FILENAME),
     )
-    bad_sample = SampleRecord(
+
+
+def read_metadata_rows(metadata_path: Path) -> list[dict[str, str]]:
+    """Read the metadata CSV the pipeline wrote back into rows."""
+    with metadata_path.open(newline="") as metadata_file:
+        return list(csv.DictReader(metadata_file))
+
+
+def test_pipeline_writes_an_ok_metadata_row_for_a_successful_sample(tmp_path: Path):
+    # arrange
+    sample = make_sample()
+    pipeline = make_pipeline(tmp_path, [sample], FakeLandmarkExtractor())
+
+    # act
+    pipeline.run()
+
+    # assert
+    expected_row = {
+        "sample_id": "sample_good",
+        "source_type": GOOD_SOURCE_TYPE,
+        "source_name": "unit_test",
+        "label": "0",
+        "raw_label": "swipe_left",
+        "path": "good.mp4",
+        "total_frames": str(FRAME_COUNT),
+        "detected_frames": str(FRAME_COUNT),
+        "detection_rate": "1.00",
+        "status": "ok",
+        "landmark_path": str(tmp_path / LANDMARKS_DIRNAME / "sample_good.npy"),
+        "error": "",
+    }
+
+    assert read_metadata_rows(tmp_path / METADATA_FILENAME) == [expected_row]
+
+
+def test_pipeline_saves_landmarks_for_a_successful_sample(tmp_path: Path):
+    # arrange
+    sample = make_sample()
+    pipeline = make_pipeline(tmp_path, [sample], FakeLandmarkExtractor())
+
+    # act
+    pipeline.run()
+
+    # assert
+    saved_landmarks = np.load(tmp_path / LANDMARKS_DIRNAME / "sample_good.npy")
+
+    assert saved_landmarks.shape == (FRAME_COUNT, 21, 3)
+
+
+def test_pipeline_writes_an_error_metadata_row_when_the_reader_fails(tmp_path: Path):
+    # arrange
+    sample = make_sample(
         sample_id="sample_bad",
-        source_type="bad_source",
-        source_name="unit_test",
+        source_type=BAD_SOURCE_TYPE,
         external_id="2",
         label="1",
         raw_label="swipe_right",
         path=Path("bad.mp4"),
     )
+    pipeline = make_pipeline(tmp_path, [sample], FakeLandmarkExtractor())
 
-    manifest_reader = FakeManifestReader([good_sample, bad_sample])
-    reader_factory = FakeReaderFactory(
-        {
-            "good_source": FakeFrameReader(
-                frames=[np.zeros((4, 4, 3), dtype=np.uint8)] * 5
-            ),
-            "bad_source": FakeFrameReader(error=RuntimeError("cannot open file")),
-        }
-    )
-    landmark_extractor = FakeLandmarkExtractor()
-    landmark_saver = LandmarkSaver(tmp_path / "landmarks")
-    metadata_path = tmp_path / "metadata.csv"
-    metadata_writer = MetadataWriter(metadata_path)
-
-    pipeline = LandmarkExtractionPipeline(
-        manifest_reader=manifest_reader,
-        reader_factory=reader_factory,
-        landmark_extractor=landmark_extractor,
-        landmark_saver=landmark_saver,
-        metadata_writer=metadata_writer,
-    )
-
+    # act
     pipeline.run()
 
+    # assert
+    expected_row = {
+        "sample_id": "sample_bad",
+        "source_type": BAD_SOURCE_TYPE,
+        "source_name": "unit_test",
+        "label": "1",
+        "raw_label": "swipe_right",
+        "path": "bad.mp4",
+        "total_frames": "0",
+        "detected_frames": "0",
+        "detection_rate": "0.00",
+        "status": "error",
+        "landmark_path": "",
+        "error": READER_FAILURE_MESSAGE,
+    }
+
+    assert read_metadata_rows(tmp_path / METADATA_FILENAME) == [expected_row]
+
+
+def test_pipeline_keeps_processing_after_a_sample_fails(tmp_path: Path):
+    # arrange
+    good_sample = make_sample()
+    bad_sample = make_sample(
+        sample_id="sample_bad",
+        source_type=BAD_SOURCE_TYPE,
+        path=Path("bad.mp4"),
+    )
+    pipeline = make_pipeline(
+        tmp_path, [bad_sample, good_sample], FakeLandmarkExtractor()
+    )
+
+    # act
+    pipeline.run()
+
+    # assert
+    written_rows = read_metadata_rows(tmp_path / METADATA_FILENAME)
+    written_statuses = [(row["sample_id"], row["status"]) for row in written_rows]
+
+    assert written_statuses == [("sample_bad", "error"), ("sample_good", "ok")]
+
+
+def test_pipeline_closes_the_landmark_extractor_after_a_sample_fails(tmp_path: Path):
+    # arrange
+    sample = make_sample(source_type=BAD_SOURCE_TYPE, path=Path("bad.mp4"))
+    landmark_extractor = FakeLandmarkExtractor()
+    pipeline = make_pipeline(tmp_path, [sample], landmark_extractor)
+
+    # act
+    pipeline.run()
+
+    # assert
     assert landmark_extractor.closed is True
 
-    with metadata_path.open(newline="") as f:
-        written_records = list(csv.DictReader(f))
 
-    assert len(written_records) == 2
+# U23: the fakes above stand in for these classes. Instantiating the real
+# LandmarkExtractor loads a 7.5M mediapipe model, so the contract is checked at
+# the interface rather than by running one suite against both implementations.
+FAKE_REAL_PAIRS = [
+    (FakeManifestReader, SampleManifestReader),
+    (FakeFrameReader, FrameReader),
+    (FakeReaderFactory, ReaderFactory),
+    (FakeLandmarkExtractor, LandmarkExtractor),
+]
 
-    good_record = next(r for r in written_records if r["sample_id"] == "sample_good")
-    bad_record = next(r for r in written_records if r["sample_id"] == "sample_bad")
 
-    assert good_record["status"] == "ok"
-    assert good_record["detected_frames"] == "5"
-    assert Path(good_record["landmark_path"]).exists()
+def _public_methods(cls) -> dict:
+    """Public methods of a class, keyed by name."""
 
-    assert bad_record["status"] == "error"
-    assert bad_record["landmark_path"] == ""
-    assert "cannot open file" in bad_record["error"]
+    return {
+        name: function
+        for name, function in inspect.getmembers(cls, inspect.isfunction)
+        if not name.startswith("_")
+    }
+
+
+def _parameters(function) -> list:
+    """Parameter names and kinds, which is the part a caller depends on."""
+
+    return [
+        (parameter.name, parameter.kind)
+        for parameter in inspect.signature(function).parameters.values()
+    ]
+
+
+@pytest.mark.parametrize(
+    "fake, real",
+    FAKE_REAL_PAIRS,
+    ids=[fake.__name__ for fake, _ in FAKE_REAL_PAIRS],
+)
+def test_fake_matches_the_real_public_interface(fake, real):
+    # arrange
+    expected = {
+        name: _parameters(function) for name, function in _public_methods(real).items()
+    }
+
+    # act
+    fake_methods = _public_methods(fake)
+
+    # assert
+    actual = {
+        name: _parameters(fake_methods[name]) if name in fake_methods else None
+        for name in expected
+    }
+
+    assert actual == expected
