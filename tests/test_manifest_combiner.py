@@ -22,10 +22,6 @@ RECORDED_LABEL = "click"
 JESTER_LABEL = "swiping_left"
 SUPPORTED_LABELS = {RECORDED_LABEL, JESTER_LABEL}
 
-RECORDED_LABEL = "click"
-JESTER_LABEL = "swiping_left"
-SUPPORTED_LABELS = {RECORDED_LABEL, JESTER_LABEL}
-
 
 def make_row(
     tmp_path: Path,
