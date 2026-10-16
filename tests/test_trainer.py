@@ -41,6 +41,8 @@ CHECKPOINT_NAME = "best_model.pt"
 TRAIN_LOSS = 5.0
 IMPROVING_VAL_LOSSES = [3.0, 2.0, 1.0]
 STALLING_VAL_LOSSES = [1.0, 1.0, 2.0]
+WORSENING_VAL_LOSSES = [1.0, 2.0]
+BEST_VAL_LOSS = 1.0
 HISTORY_KEYS = {
     "epoch",
     "train_loss",
@@ -347,3 +349,81 @@ def test_checkpoint_is_not_rewritten_when_validation_loss_worsens(tmp_path):
     # assert
     checkpoint = torch.load(tmp_path / CHECKPOINT_NAME)
     assert checkpoint["epoch"] == 1
+
+
+# ---------------------------------------------------------------------------
+# Known bugs
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA is not available")
+@pytest.mark.xfail(
+    reason="Trainer never calls model.to(device), so forward hits a device mismatch",
+    strict=True,
+)
+def test_trainer_moves_the_model_to_its_configured_device(tmp_path):
+    # arrange
+    device = torch.device("cuda")
+    trainer = make_trainer(tmp_path, device=device, model=make_model())
+
+    # act
+    history = trainer.train(1)
+
+    # assert
+    assert math.isfinite(history["train_loss"][0])
+
+
+@pytest.mark.xfail(
+    reason="best_val_loss resets to infinity inside train(), so a second call overwrites",
+    strict=True,
+)
+def test_second_train_call_keeps_the_better_checkpoint(tmp_path):
+    # arrange
+    trainer = make_trainer(tmp_path, criterion=ScriptedCriterion(WORSENING_VAL_LOSSES))
+    trainer.train(1)
+
+    # act
+    trainer.train(1)
+
+    # assert
+    checkpoint = torch.load(tmp_path / CHECKPOINT_NAME)
+    assert checkpoint["val_loss"] == BEST_VAL_LOSS
+
+
+@pytest.mark.xfail(
+    reason="the learning rate is read after scheduler.step, so it logs the reduced rate",
+    strict=True,
+)
+def test_logged_learning_rate_is_the_rate_the_epoch_trained_with(tmp_path):
+    # arrange
+    model = make_model()
+    optimizer = torch.optim.SGD(model.parameters(), lr=LEARNING_RATE)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer, mode="min", factor=LR_FACTOR, patience=0
+    )
+    trainer = make_trainer(
+        tmp_path,
+        model=model,
+        optimizer=optimizer,
+        scheduler=scheduler,
+        criterion=ScriptedCriterion(WORSENING_VAL_LOSSES),
+    )
+
+    # act
+    history = trainer.train(len(WORSENING_VAL_LOSSES))
+
+    # assert
+    assert history["learning_rate"] == [LEARNING_RATE] * len(WORSENING_VAL_LOSSES)
+
+
+@pytest.mark.xfail(
+    reason="an empty loader divides by zero samples and raises a bare ZeroDivisionError",
+    strict=True,
+)
+def test_empty_loader_reports_an_empty_loader(tmp_path):
+    # arrange
+    trainer = make_trainer(tmp_path, train_loader=make_loader(num_samples=0))
+
+    # act / assert
+    with pytest.raises((ValueError, RuntimeError)):
+        trainer.train_one_epoch()
