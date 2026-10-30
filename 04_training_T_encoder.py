@@ -27,7 +27,6 @@ from gesture_transformer.training.gesture_dataset import (
 )
 from gesture_transformer.training.gesture_transformer_en import GestureTransformer
 from gesture_transformer.training.transformer_en_trainer import Trainer
-from gesture_transformer.evaluation.confusion_matrix import save_confusion_matrices
 
 
 def validate_target_range(
@@ -184,7 +183,6 @@ def main():
     )
     model.load_state_dict(checkpoint["model_state_dict"])
 
-    
     # save_confusion_matrices(
     #     model=model,
     #     data_loader=val_loader,
