@@ -175,6 +175,22 @@ def main():
     # history =
     trainer.train(NUM_EPOCHS)
 
+    # Restore the checkpoint with the lowest validation loss.
+    checkpoint = torch.load(
+        CHECKPOINT_DIR / BEST_MODEL_FILENAME,
+        map_location=TRAINING_DEVICE,
+        weights_only=True,
+    )
+    model.load_state_dict(checkpoint["model_state_dict"])
+
+    # save_confusion_matrices(
+    #     model=model,
+    #     data_loader=val_loader,
+    #     device=TRAINING_DEVICE,
+    #     label_to_index=label_to_index,
+    #     output_dir=CHECKPOINT_DIR.parent / "evaluation",
+    # )
+
 
 if __name__ == "__main__":
     main()
