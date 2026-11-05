@@ -47,7 +47,15 @@ notebooks/
 src/gesture_transformer/models/hand_landmarker.task
 
 # Data files
-data/interim/
-data/processed/
 data/manifests/samples.csv
 data/manifests/recorded_samples.csv
+
+# Recorded landmarks and metadata are version controlled so sessions merge
+# through git. Needs the "/*" form: git will not descend into a directory
+# excluded with a trailing slash, so the negations below would do nothing.
+data/interim/*
+!data/interim/landmarks/
+data/interim/landmarks/*
+!data/interim/landmarks/recorded/
+
+!data/processed/recorded_metadata.csv
