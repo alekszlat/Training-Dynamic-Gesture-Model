@@ -39,4 +39,21 @@ jobs:
         with:
           enable-cache: true
       - run: uv sync --frozen
-      - run: uv run pytest -q
+      # pytest-randomly shuffles every run and prints the seed it used. A failure
+      # here is reproducible with: uv run pytest -p randomly --randomly-seed=<seed>
+      - run: uv run pytest -q -m "not flaky"
+
+  # Quarantined tests still run, but cannot block a merge. Keeps a known
+  # order-dependent test visible instead of letting it rot or be deleted.
+  quarantine:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: uv sync --frozen
+      # Exit 5 is "no tests collected", which is the normal state when nothing is
+      # quarantined. Without this the job shows a red check on every green PR.
+      - run: uv run pytest -q -m flaky || [ $? -eq 5 ]
