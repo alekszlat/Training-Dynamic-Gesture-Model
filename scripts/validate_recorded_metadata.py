@@ -30,11 +30,11 @@ def untracked_landmarks(metadata_path: Path) -> list[str]:
     """
 
     tracked = subprocess.run(
-        ["git", "ls-files", "--cached", LANDMARKS_DIR],
+        ["git", "ls-files", "--cached", "-z", LANDMARKS_DIR],
         capture_output=True,
         text=True,
-        check=False,
-    ).stdout.split()
+        check=True,
+    ).stdout.split("\0")
 
     with metadata_path.open(newline="", encoding="utf-8") as file:
         referenced = {

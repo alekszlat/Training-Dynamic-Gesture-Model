@@ -63,5 +63,5 @@ repos:
         name: validate recorded metadata   # merge=union is a text merge, it cannot check itself
         entry: uv run python scripts/validate_recorded_metadata.py
         language: system
-        files: ^data/processed/recorded_metadata\.csv$
+        files: ^data/(processed/recorded_metadata\.csv|interim/landmarks/recorded/)
         pass_filenames: false              # the script knows its own path
