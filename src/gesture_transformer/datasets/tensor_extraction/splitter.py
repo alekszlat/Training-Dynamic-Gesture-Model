@@ -40,7 +40,7 @@ class Splitter:
         Returns:
             SplitResult containing train_records and val_records.
         """
-
+        records.sort(key=lambda r: r.sample_id)  # Sort by sample_id for reproducibility
         records_by_label = self._group_by_label(records)
 
         train_records: list[MetadataRecord] = []

@@ -3,9 +3,10 @@ default_install_hook_types: [pre-commit, pre-push]
 default_stages: [pre-commit]        # without this, every hook fires at every stage
 minimum_pre_commit_version: "4.0.0"
 
+# data/ is generated or binary, except the one csv that is version controlled.
 exclude: |
   (?x)^(
-    data/.*|
+    data/(?!processed/recorded_metadata\.csv$).*|
     .*\.ipynb_checkpoints/.*
   )$
 
@@ -57,3 +58,10 @@ repos:
         types: [python]             # only trigger when Python actually changed
         pass_filenames: false       # pytest chooses its own targets
         stages: [pre-push]
+
+      - id: recorded-metadata
+        name: validate recorded metadata   # merge=union is a text merge, it cannot check itself
+        entry: uv run python scripts/validate_recorded_metadata.py
+        language: system
+        files: ^data/(processed/recorded_metadata\.csv|interim/landmarks/recorded/)
+        pass_filenames: false              # the script knows its own path

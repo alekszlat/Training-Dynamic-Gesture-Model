@@ -1,0 +1,5 @@
+# Parallel recording sessions both append at the end. Union keeps both sides,
+# safe because sample_id is a timestamp and nothing reads the file in order.
+data/processed/recorded_metadata.csv merge=union
+
+*.npy binary

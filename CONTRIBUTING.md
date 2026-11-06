@@ -89,7 +89,7 @@ The pipeline scripts (`01_`–`03_`) run in order and only from the repository r
 
 ## What not to do
 
-- Do not commit datasets, generated tensors, or `hand_landmarker.task`. They are ignored deliberately.
+- Do not commit videos, generated tensors, or `hand_landmarker.task`. They are ignored deliberately. Recorded landmarks and `recorded_metadata.csv` are the exception: commit the two together.
 - Do not force-push a branch someone else may be reading.
 - Do not touch files outside the scope of the change. Note anything unrelated in a separate issue.
 

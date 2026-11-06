@@ -20,6 +20,7 @@ from config import (
     TRAINING_DEVICE,
     VAL_FILE,
 )
+from gesture_transformer.evaluation.confusion_matrix import save_confusion_matrices
 from gesture_transformer.training.data_loader import create_data_loader
 from gesture_transformer.training.gesture_dataset import (
     GestureDataset,
@@ -184,13 +185,13 @@ def main():
     )
     model.load_state_dict(checkpoint["model_state_dict"])
 
-    # save_confusion_matrices(
-    #     model=model,
-    #     data_loader=val_loader,
-    #     device=TRAINING_DEVICE,
-    #     label_to_index=label_to_index,
-    #     output_dir=CHECKPOINT_DIR.parent / "evaluation",
-    # )
+    save_confusion_matrices(
+        model=model,
+        data_loader=val_loader,
+        device=TRAINING_DEVICE,
+        label_to_index=label_to_index,
+        output_dir=CHECKPOINT_DIR.parent / "evaluation",
+    )
 
 
 if __name__ == "__main__":
