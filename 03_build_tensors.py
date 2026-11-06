@@ -12,7 +12,7 @@ LABEL_LIST = sorted(SUPPORTED_LABELS)
 
 if __name__ == "__main__":
     builder = TensorBuilder(
-        metadata_path=METADATA_PATH,
+        metadata_paths=METADATA_PATH,
         processed_dir=PROCESSED_DIR,
         label_list=LABEL_LIST,
         target_length=TARGET_SEQUENCE_LENGTH,

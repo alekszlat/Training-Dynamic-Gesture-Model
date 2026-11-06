@@ -20,6 +20,7 @@ from config import (
     TRAINING_DEVICE,
     VAL_FILE,
 )
+from gesture_transformer.evaluation.confusion_matrix import save_confusion_matrices
 from gesture_transformer.training.data_loader import create_data_loader
 from gesture_transformer.training.gesture_dataset import (
     GestureDataset,
@@ -125,9 +126,9 @@ def main():
         input_dim=input_dim,
         max_len=sequence_length,
         num_classes=num_classes,
-    ).to(TRAINING_DEVICE)
+    )
+    model.to(TRAINING_DEVICE)
     print("Selected device:", TRAINING_DEVICE)
-    print("Model device:", next(model.parameters()).device)
 
     # Create GestureDataset instances
     train_dataset = GestureDataset(train_data)
@@ -171,6 +172,7 @@ def main():
         optimizer=optimizer,
         scheduler=scheduler,
     )
+    print("Model device:", next(trainer.model.parameters()).device)
 
     # history =
     trainer.train(NUM_EPOCHS)
@@ -183,13 +185,13 @@ def main():
     )
     model.load_state_dict(checkpoint["model_state_dict"])
 
-    # save_confusion_matrices(
-    #     model=model,
-    #     data_loader=val_loader,
-    #     device=TRAINING_DEVICE,
-    #     label_to_index=label_to_index,
-    #     output_dir=CHECKPOINT_DIR.parent / "evaluation",
-    # )
+    save_confusion_matrices(
+        model=model,
+        data_loader=val_loader,
+        device=TRAINING_DEVICE,
+        label_to_index=label_to_index,
+        output_dir=CHECKPOINT_DIR.parent / "evaluation",
+    )
 
 
 if __name__ == "__main__":

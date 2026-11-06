@@ -113,7 +113,7 @@ LANDMARK_DELEGATE = mp.tasks.BaseOptions.Delegate.GPU
 
 # Metadata produced by the landmark-extraction stage and consumed by
 # the tensor-building pipeline.
-METADATA_PATH = METADATA_OUTPUT_PATH
+METADATA_PATH = [METADATA_OUTPUT_PATH, PROCESSED_DIR / "recorded_metadata.csv"]
 
 # Fixed number of temporal positions used for each gesture sequence.
 # Shorter gestures are padded and longer sequences are normalized

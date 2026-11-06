@@ -27,17 +27,17 @@ class TensorBuilder:
 
     def __init__(
         self,
-        metadata_path: Path,
+        metadata_paths: list[Path],
         processed_dir: Path,
         label_list: list[str],
         target_length: int = 40,
     ) -> None:
-        self.metadata_path = metadata_path
+        self.metadata_paths = metadata_paths
         self.processed_dir = processed_dir
         self.label_list = label_list
         self.target_length = target_length
 
-        self.metadata_reader = MetadataReader(metadata_path)
+        self.metadata_reader = MetadataReader(metadata_paths)
         self.splitter = Splitter(val_ratio=0.2, random_seed=42)
         self.label_encoder = LabelEncoder(label_list)
         self.normalizer = TemporalNormalizer(target_length=target_length)

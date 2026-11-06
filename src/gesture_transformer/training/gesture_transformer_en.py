@@ -169,6 +169,19 @@ class GestureTransformer(nn.Module):
         # [B, T, input_dim]
         #          ↓
         # [B, T, hidden_dim]
+
+        # True means padding: overwrite those inputs with zero.
+        x = x.masked_fill(
+            padding_mask.unsqueeze(-1),
+            0.0,
+        )
+
+        # Invalid values in real frames remain an error.
+        if not torch.isfinite(x).all():
+            raise RuntimeError(
+                "Input features contain NaN or Inf for one or more valid frames."
+            )
+
         x = self.projection(x)
 
         # ---------------------------------------------------------

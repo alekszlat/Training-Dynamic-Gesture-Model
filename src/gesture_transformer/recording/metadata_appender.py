@@ -235,7 +235,8 @@ class MetadataAppender:
         is_new_file = not output_path.exists()
 
         with open(output_path, "a", encoding="utf-8", newline="") as file:
-            writer = csv.DictWriter(file, fieldnames=fieldnames)
+            # LF, not the csv default CRLF: a flip rewrites every row.
+            writer = csv.DictWriter(file, fieldnames=fieldnames, lineterminator="\n")
 
             if is_new_file:
                 writer.writeheader()

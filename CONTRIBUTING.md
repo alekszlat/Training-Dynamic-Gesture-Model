@@ -55,18 +55,41 @@ Branch prefixes are spelled out (`feature/`), commit types are not (`feat:`).
 - Nothing reaches `main` except through a pull request, even while nothing enforces it.
 - Pull requests are squash-merged, so the title becomes the commit message. Delete the branch afterwards.
 
+## Tests
+
+Tests run in a random order, reseeded every run, so an order-dependent test fails
+for the person who wrote it rather than in someone else's unrelated pull request.
+The seed is printed in the pytest header. Replay a failing order with:
+
+```bash
+uv run pytest -p randomly --randomly-seed=<seed>
+```
+
+A test that passes alone and fails in a shuffled run is order-dependent. Do not
+pin the order, and do not delete the test. Quarantine it:
+
+```python
+@pytest.mark.flaky
+def test_something(): ...
+```
+
+The CI gate skips quarantined tests, and a second job runs them without being able
+to block a merge, so one stays visible instead of rotting. Open an issue when you
+quarantine something. Remove the marker once the polluting test cleans up after
+itself, or the quarantined test sets up what it was borrowing from a neighbour.
+
 ## Submitting a pull request
 
 1. One pull request, one logical change.
 2. Commit with [conventional commits](https://www.conventionalcommits.org): `<type>(<scope>): <subject>`, imperative, lower case, no trailing period. Types: `feat`, `fix`, `docs`, `refactor`, `test`, `build`, `ci`, `chore`, `perf`, `style`.
-3. Run `uv run pytest` before opening. There is no CI yet, so the checks you run are the only ones that run.
+3. Run `uv run pytest` before opening. CI runs the same checks, so a failure there is one you could have seen first.
 4. Fill in the pull request template, including what you did **not** test.
 
 The pipeline scripts (`01_`–`03_`) run in order and only from the repository root.
 
 ## What not to do
 
-- Do not commit datasets, generated tensors, or `hand_landmarker.task`. They are ignored deliberately.
+- Do not commit videos, generated tensors, or `hand_landmarker.task`. They are ignored deliberately. Recorded landmarks and `recorded_metadata.csv` are the exception: commit the two together.
 - Do not force-push a branch someone else may be reading.
 - Do not touch files outside the scope of the change. Note anything unrelated in a separate issue.
 
