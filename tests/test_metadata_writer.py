@@ -44,7 +44,7 @@ def test_field_containing_a_comma_survives_write_and_read(tmp_path):
 
     # act
     MetadataWriter(metadata_path).write([record])
-    loaded = MetadataReader(metadata_path)._load_metadata(status="error")
+    loaded = MetadataReader([metadata_path])._load_metadata(status="error")
 
     # assert
     assert loaded == [record]
