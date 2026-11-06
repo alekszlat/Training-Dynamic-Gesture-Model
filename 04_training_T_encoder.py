@@ -125,9 +125,9 @@ def main():
         input_dim=input_dim,
         max_len=sequence_length,
         num_classes=num_classes,
-    ).to(TRAINING_DEVICE)
+    )
+    model.to(TRAINING_DEVICE)
     print("Selected device:", TRAINING_DEVICE)
-    print("Model device:", next(model.parameters()).device)
 
     # Create GestureDataset instances
     train_dataset = GestureDataset(train_data)
@@ -171,6 +171,7 @@ def main():
         optimizer=optimizer,
         scheduler=scheduler,
     )
+    print("Model device:", next(trainer.model.parameters()).device)
 
     # history =
     trainer.train(NUM_EPOCHS)

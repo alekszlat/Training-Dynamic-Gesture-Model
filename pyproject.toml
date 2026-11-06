@@ -22,6 +22,7 @@ dev = [
     "pre-commit>=4.6.2",
     "pytest>=9.1.1",
     "pytest-mock>=3.15.1",
+    "pytest-randomly>=3.16.0",
 ]
 
 [build-system]
@@ -40,3 +41,16 @@ testpaths = ["tests"]
 # C3/F5: the repo root holds config.py, which tests/ imports. Declaring it here
 # keeps the tests from mutating sys.path at import time (leaked global state).
 pythonpath = ["."]
+
+# Quarantine for a test found to be order-dependent. Mark it rather than delete
+# it: the test still describes real behaviour, and deleting it loses that while
+# leaving the underlying leak in place. The CI gate skips these, a second
+# non-blocking job keeps running them, so a quarantined test stays visible
+# without holding up merges. Unmark it once the polluter has a teardown or the
+# brittle test owns its setup.
+markers = [
+    "flaky: order-dependent, quarantined out of the CI gate until fixed",
+]
+
+# A mistyped marker silently does nothing without this.
+addopts = "--strict-markers"
