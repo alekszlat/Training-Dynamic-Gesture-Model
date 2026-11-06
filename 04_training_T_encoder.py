@@ -2,7 +2,6 @@ import json
 
 import torch
 from torch import nn
-from functools import partial
 
 from config import (
     BATCH_SIZE,
@@ -168,10 +167,9 @@ def main():
         model=model,
         train_loader=train_loader,
         val_loader=val_loader,
-        criterion=nn.CrossEntropyLoss(),
+        criterion=criterion,
         optimizer=optimizer,
         scheduler=scheduler,
-        
     )
     print("Model device:", next(trainer.model.parameters()).device)
 

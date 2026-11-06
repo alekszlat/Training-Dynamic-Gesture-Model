@@ -67,8 +67,10 @@ class Trainer:
             total_samples += features.size(0)
 
         if total_samples == 0:
-            raise ValueError("Training loader produced no samples during training epoch.")
-        
+            raise ValueError(
+                "Training loader produced no samples during training epoch."
+            )
+
         # Calculate average loss and accuracy for the epoch
         avg_loss = total_loss / total_samples
         accuracy = total_correct / total_samples
@@ -107,7 +109,9 @@ class Trainer:
                 total_samples += features.size(0)
 
         if total_samples == 0:
-            raise ValueError("Training loader produced no samples during training epoch.")
+            raise ValueError(
+                "Training loader produced no samples during training epoch."
+            )
 
         # Calculate average loss and accuracy for the epoch
         avg_loss = total_loss / total_samples
