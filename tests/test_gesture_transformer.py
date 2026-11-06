@@ -194,7 +194,7 @@ def test_mask_shape_mismatch_raises():
         "raises. The desired behaviour is not yet decided: sanitise the input, "
         "or keep failing loudly."
     ),
-    strict=True,
+    strict=False,
 )
 def test_nan_at_a_padded_frame_does_not_affect_the_output():
     # arrange

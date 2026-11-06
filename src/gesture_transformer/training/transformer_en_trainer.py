@@ -18,15 +18,16 @@ class Trainer:
         criterion: torch.nn.Module,
         scheduler: torch.optim.lr_scheduler.ReduceLROnPlateau,
     ):
+        self.device = device
         self.save_dir = save_dir
         self.best_model_name_save = best_model_name_save
         self.model = model
         self.optimizer = optimizer
         self.criterion = criterion
-        self.device = device
         self.train_loader = train_loader
         self.val_loader = val_loader
         self.scheduler = scheduler
+        self.best_val_loss = float("inf")
 
     def train_one_epoch(
         self,
@@ -34,7 +35,6 @@ class Trainer:
 
         # Set the model to training mode
         self.model.train()
-
         # Initialize variables to track loss and accuracy
         total_loss = 0.0
         total_correct = 0
@@ -66,6 +66,9 @@ class Trainer:
             total_correct += (logits.argmax(dim=1) == answers).sum().item()
             total_samples += features.size(0)
 
+        if total_samples == 0:
+            raise ValueError("Training loader produced no samples during training epoch.")
+        
         # Calculate average loss and accuracy for the epoch
         avg_loss = total_loss / total_samples
         accuracy = total_correct / total_samples
@@ -103,6 +106,9 @@ class Trainer:
                 total_correct += (logits.argmax(dim=1) == answers).sum().item()
                 total_samples += features.size(0)
 
+        if total_samples == 0:
+            raise ValueError("Training loader produced no samples during training epoch.")
+
         # Calculate average loss and accuracy for the epoch
         avg_loss = total_loss / total_samples
         accuracy = total_correct / total_samples
@@ -126,9 +132,9 @@ class Trainer:
         checkpoint_dir.mkdir(parents=True, exist_ok=True)
         best_model_path = checkpoint_dir / self.best_model_name_save
 
-        best_val_loss = float("inf")
-
         for epoch in range(num_epochs):
+            current_lr = self.optimizer.param_groups[0]["lr"]
+
             # Train the model for one epoch
             train_loss, train_accuracy = self.train_one_epoch()
 
@@ -138,8 +144,6 @@ class Trainer:
             # Step the learning rate scheduler
             self.scheduler.step(val_loss)
 
-            current_lr = self.optimizer.param_groups[0]["lr"]
-
             history["epoch"].append(epoch + 1)
             history["train_loss"].append(train_loss)
             history["train_accuracy"].append(train_accuracy)
@@ -147,8 +151,8 @@ class Trainer:
             history["val_accuracy"].append(val_accuracy)
             history["learning_rate"].append(current_lr)
 
-            if val_loss < best_val_loss:
-                best_val_loss = val_loss
+            if val_loss < self.best_val_loss:
+                self.best_val_loss = val_loss
 
                 torch.save(
                     {

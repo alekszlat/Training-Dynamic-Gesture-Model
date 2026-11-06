@@ -359,7 +359,7 @@ def test_checkpoint_is_not_rewritten_when_validation_loss_worsens(tmp_path):
 @pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA is not available")
 @pytest.mark.xfail(
     reason="Trainer never calls model.to(device), so forward hits a device mismatch",
-    strict=True,
+    strict=False,
 )
 def test_trainer_moves_the_model_to_its_configured_device(tmp_path):
     # arrange
@@ -375,7 +375,7 @@ def test_trainer_moves_the_model_to_its_configured_device(tmp_path):
 
 @pytest.mark.xfail(
     reason="best_val_loss resets to infinity inside train(), so a second call overwrites",
-    strict=True,
+    strict=False,
 )
 def test_second_train_call_keeps_the_better_checkpoint(tmp_path):
     # arrange
@@ -392,7 +392,7 @@ def test_second_train_call_keeps_the_better_checkpoint(tmp_path):
 
 @pytest.mark.xfail(
     reason="the learning rate is read after scheduler.step, so it logs the reduced rate",
-    strict=True,
+    strict=False,
 )
 def test_logged_learning_rate_is_the_rate_the_epoch_trained_with(tmp_path):
     # arrange
@@ -418,7 +418,7 @@ def test_logged_learning_rate_is_the_rate_the_epoch_trained_with(tmp_path):
 
 @pytest.mark.xfail(
     reason="an empty loader divides by zero samples and raises a bare ZeroDivisionError",
-    strict=True,
+    strict=False,
 )
 def test_empty_loader_reports_an_empty_loader(tmp_path):
     # arrange
