@@ -193,3 +193,7 @@ SCHEDULER_PATIENCE = 2
 
 # Lower bound below which the scheduler cannot reduce the learning rate.
 MIN_LEARNING_RATE = 1e-6
+
+# Seeds for the evaluation runs (docs/evaluation-protocol.md, Training).
+# One seed sets the train/val split, the model start values, and the clip order.
+SEEDS = (1, 2, 3, 4, 5)
