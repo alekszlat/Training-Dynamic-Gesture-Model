@@ -31,14 +31,16 @@ class TensorBuilder:
         processed_dir: Path,
         label_list: list[str],
         target_length: int = 40,
+        random_seed: int = 42,
     ) -> None:
         self.metadata_paths = metadata_paths
         self.processed_dir = processed_dir
         self.label_list = label_list
         self.target_length = target_length
+        self.random_seed = random_seed
 
         self.metadata_reader = MetadataReader(metadata_paths)
-        self.splitter = Splitter(val_ratio=0.2, random_seed=42)
+        self.splitter = Splitter(val_ratio=0.2, random_seed=self.random_seed)
         self.label_encoder = LabelEncoder(label_list)
         self.normalizer = TemporalNormalizer(target_length=target_length)
         self.feature_builder = FeatureBuilder()

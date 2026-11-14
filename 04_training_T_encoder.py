@@ -7,15 +7,16 @@ from config import (
     BATCH_SIZE,
     BEST_MODEL_FILENAME,
     CHECKPOINT_DIR,
-    LABEL_MAPPING_FILE,
     LEARNING_RATE,
     MIN_LEARNING_RATE,
+    MODEL_SETTINGS,
     NUM_EPOCHS,
     NUM_WORKERS,
     PROCESSED_DIR,
     SCHEDULER_FACTOR,
     SCHEDULER_MODE,
     SCHEDULER_PATIENCE,
+    SEEDS,
     TRAIN_FILE,
     TRAINING_DEVICE,
     VAL_FILE,
@@ -50,16 +51,21 @@ def validate_target_range(
         )
 
 
-def main():
+def main(seed: int) -> None:
+    torch.manual_seed(seed)
+
+    data_dir = PROCESSED_DIR / f"seed_{seed}"
+    checkpoint_dir = CHECKPOINT_DIR / f"seed_{seed}"
+
     # Load the training and validation datasets
-    loader = GestureDatasetLoader(PROCESSED_DIR)
+    loader = GestureDatasetLoader(data_dir)
     train_data = loader.load(TRAIN_FILE)
     val_data = loader.load(VAL_FILE)
 
     input_dim = train_data["x"].shape[-1]
     sequence_length = train_data["x"].shape[-2]
 
-    with LABEL_MAPPING_FILE.open(
+    with (data_dir / "label_to_index.json").open(
         "r",
         encoding="utf-8",
     ) as file:
@@ -126,6 +132,11 @@ def main():
         input_dim=input_dim,
         max_len=sequence_length,
         num_classes=num_classes,
+        hidden_dim=MODEL_SETTINGS["hidden_dim"],
+        num_layers=MODEL_SETTINGS["num_layers"],
+        num_heads=MODEL_SETTINGS["num_heads"],
+        dim_feedforward=MODEL_SETTINGS["dim_feedforward"],
+        dropout=MODEL_SETTINGS["dropout"],
     )
     model.to(TRAINING_DEVICE)
     print("Selected device:", TRAINING_DEVICE)
@@ -163,7 +174,7 @@ def main():
 
     trainer = Trainer(
         device=TRAINING_DEVICE,
-        save_dir=CHECKPOINT_DIR,
+        save_dir=checkpoint_dir,
         best_model_name_save=BEST_MODEL_FILENAME,
         model=model,
         train_loader=train_loader,
@@ -174,12 +185,17 @@ def main():
     )
     print("Model device:", next(trainer.model.parameters()).device)
 
-    # history =
-    trainer.train(NUM_EPOCHS)
+    history = trainer.train(NUM_EPOCHS)
+
+    with (checkpoint_dir / "training_history.json").open(
+        "w",
+        encoding="utf-8",
+    ) as file:
+        json.dump(history, file, indent=4)
 
     # Restore the checkpoint with the lowest validation loss.
     checkpoint = torch.load(
-        CHECKPOINT_DIR / BEST_MODEL_FILENAME,
+        checkpoint_dir / BEST_MODEL_FILENAME,
         map_location=TRAINING_DEVICE,
         weights_only=True,
     )
@@ -190,9 +206,11 @@ def main():
         data_loader=val_loader,
         device=TRAINING_DEVICE,
         label_to_index=label_to_index,
-        output_dir=CHECKPOINT_DIR.parent / "evaluation",
+        output_dir=CHECKPOINT_DIR.parent / "evaluation" / f"seed_{seed}",
     )
 
 
 if __name__ == "__main__":
-    main()
+    for seed in SEEDS:
+        print(f"\n=== Training with seed {seed} ===")
+        main(seed)

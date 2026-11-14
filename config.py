@@ -74,7 +74,6 @@ SUPPORTED_LABELS = {
     "swiping_up",
     "swiping_down",
     "doing_other_things",
-    "no_gesture",
 }
 
 
@@ -193,3 +192,17 @@ SCHEDULER_PATIENCE = 2
 
 # Lower bound below which the scheduler cannot reduce the learning rate.
 MIN_LEARNING_RATE = 1e-6
+
+# Seeds for the evaluation runs (docs/evaluation-protocol.md, Training).
+# One seed sets the train/val split, the model start values, and the clip order.
+SEEDS = (1, 2, 3, 4, 5)
+
+# GestureTransformer settings.
+# hidden_dim must be divisible by num_heads.
+MODEL_SETTINGS = {
+    "hidden_dim": 64,
+    "num_layers": 4,
+    "num_heads": 8,
+    "dim_feedforward": 256,
+    "dropout": 0.2,
+}

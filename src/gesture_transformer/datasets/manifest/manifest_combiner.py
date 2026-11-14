@@ -38,17 +38,21 @@ class ManifestCombiner:
         invalid_rows = []
 
         print("Going over combined list")
+        counter = 1
+        lengnth = len(combined_manifest)
         for row in combined_manifest:
             check, message = self._validate_combined_manifest_row(row)
 
             if check:
-                ##print(message)
                 if row.label in self.supported_labels:
                     validated_manifest.append(row)
+                    print(f"{counter}/{lengnth} - {row.sample_id} is valid")
                 else:
                     continue
             else:
                 invalid_rows.append((row, message))
+
+            counter += 1
 
         if invalid_rows:
             print(
