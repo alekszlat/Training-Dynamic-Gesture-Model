@@ -9,6 +9,7 @@ from config import (
     CHECKPOINT_DIR,
     LEARNING_RATE,
     MIN_LEARNING_RATE,
+    MODEL_SETTINGS,
     NUM_EPOCHS,
     NUM_WORKERS,
     PROCESSED_DIR,
@@ -19,7 +20,6 @@ from config import (
     TRAIN_FILE,
     TRAINING_DEVICE,
     VAL_FILE,
-    MODEL_SETTINGS,
 )
 from gesture_transformer.evaluation.confusion_matrix import save_confusion_matrices
 from gesture_transformer.training.data_loader import create_data_loader

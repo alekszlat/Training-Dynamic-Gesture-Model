@@ -109,6 +109,7 @@ def print_table(rows: list[dict]) -> None:
             f"{row['median_seconds']:>10}"
         )
 
+
 def write_csv(rows: list[dict]) -> None:
     """Save the report rows to OUTPUT_PATH."""
 
@@ -125,7 +126,10 @@ def main() -> None:
     groups = group_frame_counts(records)
 
     rows = sorted(
-        (summarize(source, label, counts) for (source, label), counts in groups.items()),
+        (
+            summarize(source, label, counts)
+            for (source, label), counts in groups.items()
+        ),
         key=sort_key,
     )
 
@@ -136,5 +140,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
-
