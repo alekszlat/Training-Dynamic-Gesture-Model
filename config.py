@@ -196,3 +196,14 @@ MIN_LEARNING_RATE = 1e-6
 # Seeds for the evaluation runs (docs/evaluation-protocol.md, Training).
 # One seed sets the train/val split, the model start values, and the clip order.
 SEEDS = (1, 2, 3, 4, 5)
+
+# GestureTransformer settings. 04_training_T_encoder.py builds the model from
+# these and saves them, with the data-derived values, to model_args.json.
+# hidden_dim must be divisible by num_heads.
+MODEL_SETTINGS = {
+    "hidden_dim": 64,
+    "num_layers": 4,
+    "num_heads": 8,
+    "dim_feedforward": 256,
+    "dropout": 0.2,
+}

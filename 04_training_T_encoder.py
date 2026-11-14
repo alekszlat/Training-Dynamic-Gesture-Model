@@ -19,6 +19,7 @@ from config import (
     TRAIN_FILE,
     TRAINING_DEVICE,
     VAL_FILE,
+    MODEL_SETTINGS,
 )
 from gesture_transformer.evaluation.confusion_matrix import save_confusion_matrices
 from gesture_transformer.training.data_loader import create_data_loader
@@ -131,6 +132,11 @@ def main(seed: int) -> None:
         input_dim=input_dim,
         max_len=sequence_length,
         num_classes=num_classes,
+        hidden_dim=MODEL_SETTINGS["hidden_dim"],
+        num_layers=MODEL_SETTINGS["num_layers"],
+        num_heads=MODEL_SETTINGS["num_heads"],
+        dim_feedforward=MODEL_SETTINGS["dim_feedforward"],
+        dropout=MODEL_SETTINGS["dropout"],
     )
     model.to(TRAINING_DEVICE)
     print("Selected device:", TRAINING_DEVICE)
