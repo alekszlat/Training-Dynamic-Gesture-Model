@@ -107,6 +107,7 @@ class LandmarkExtractionPipeline:
             saved_path = self.landmark_saver.save(
                 sample_id=sample.sample_id,
                 landmarks=extraction_result.landmarks,
+                subdir=sample.source_name,
             )
             landmark_path = str(saved_path)
 

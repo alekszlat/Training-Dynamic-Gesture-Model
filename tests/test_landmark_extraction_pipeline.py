@@ -172,7 +172,9 @@ def test_pipeline_writes_an_ok_metadata_row_for_a_successful_sample(tmp_path: Pa
         "detected_frames": str(FRAME_COUNT),
         "detection_rate": "1.00",
         "status": "ok",
-        "landmark_path": str(tmp_path / LANDMARKS_DIRNAME / "sample_good.npy"),
+        "landmark_path": str(
+            tmp_path / LANDMARKS_DIRNAME / "unit_test" / "sample_good.npy"
+        ),
         "error": "",
     }
 
@@ -188,9 +190,35 @@ def test_pipeline_saves_landmarks_for_a_successful_sample(tmp_path: Path):
     pipeline.run()
 
     # assert
-    saved_landmarks = np.load(tmp_path / LANDMARKS_DIRNAME / "sample_good.npy")
+    saved_landmarks = np.load(
+        tmp_path / LANDMARKS_DIRNAME / "unit_test" / "sample_good.npy"
+    )
 
     assert saved_landmarks.shape == (FRAME_COUNT, 21, 3)
+
+
+def test_pipeline_saves_landmarks_in_one_folder_per_source(tmp_path: Path):
+    # arrange
+    jester_sample = make_sample(sample_id="sample_jester", source_name="jester")
+    recorded_sample = make_sample(sample_id="sample_recorded", source_name="recorded")
+    pipeline = make_pipeline(
+        tmp_path, [jester_sample, recorded_sample], FakeLandmarkExtractor()
+    )
+
+    # act
+    pipeline.run()
+
+    # assert
+    landmarks_dir = tmp_path / LANDMARKS_DIRNAME
+    saved_files = sorted(
+        path.relative_to(landmarks_dir).as_posix()
+        for path in landmarks_dir.rglob("*.npy")
+    )
+
+    assert saved_files == [
+        "jester/sample_jester.npy",
+        "recorded/sample_recorded.npy",
+    ]
 
 
 def test_pipeline_writes_an_error_metadata_row_when_the_reader_fails(tmp_path: Path):
