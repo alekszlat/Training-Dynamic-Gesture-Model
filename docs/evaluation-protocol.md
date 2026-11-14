@@ -12,7 +12,7 @@ Status: agreed on 2026-11-13. Settings below are fixed before the test users are
 ## Data
 - Training and validation: Jester subset + recordings of one additional participant (12 FPS). Random 80/20 split of clips.
 - Test: 5 new users, never used in training, validation, or tuning. Same camera and resolution as the additional participant, recorded at 12 FPS.
-- Record all 6 classes for each test user. Aim for 20 or more clips per class per user (rule of thumb, not from a source).
+- Record all 5 classes for each test user. Aim for 20 or more clips per class per user (rule of thumb, not from a source).
 - Write down for each test user: hand (left or right), distance to camera, light.
 - Resample recordings to 12 FPS (nearest frame in time, or camera setting) with one method for every user.
 

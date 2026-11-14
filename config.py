@@ -74,7 +74,6 @@ SUPPORTED_LABELS = {
     "swiping_up",
     "swiping_down",
     "doing_other_things",
-    "no_gesture",
 }
 
 
