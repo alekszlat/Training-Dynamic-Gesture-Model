@@ -134,9 +134,7 @@ def main(seed: int) -> None:
         **MODEL_SETTINGS,
     }
     # Initialize the GestureTransformer model
-    model = GestureTransformer(
-        **model_args
-    )
+    model = GestureTransformer(**model_args)
     model.to(TRAINING_DEVICE)
     print("Selected device:", TRAINING_DEVICE)
 

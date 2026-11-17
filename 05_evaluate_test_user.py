@@ -108,8 +108,12 @@ def main() -> None:
         print(confusion_matrix(y_true, y_pred, labels=class_ids))
 
     print("\n=== All seeds (mean ± SD) ===")
-    print(f"Accuracy: {statistics.mean(accuracies):.4f} ± {statistics.stdev(accuracies):.4f}")
-    print(f"Macro-F1: {statistics.mean(macro_f1s):.4f} ± {statistics.stdev(macro_f1s):.4f}")
+    print(
+        f"Accuracy: {statistics.mean(accuracies):.4f} ± {statistics.stdev(accuracies):.4f}"
+    )
+    print(
+        f"Macro-F1: {statistics.mean(macro_f1s):.4f} ± {statistics.stdev(macro_f1s):.4f}"
+    )
 
 
 if __name__ == "__main__":

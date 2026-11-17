@@ -219,7 +219,6 @@ def classify_clip(
     return torch.softmax(logits, dim=1)[0].numpy()
 
 
-
 def main() -> None:
     """
     Open the webcam and classify gestures until the user quits.
@@ -274,9 +273,8 @@ def main() -> None:
                 print("Failed to read from webcam.")
                 break
 
-            preview = cv2.flip(frame,1)
+            preview = cv2.flip(frame, 1)
 
-            
             now = time.time()
             key = cv2.waitKey(1) & 0xFF
 
