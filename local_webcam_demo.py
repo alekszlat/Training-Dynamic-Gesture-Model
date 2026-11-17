@@ -48,10 +48,10 @@ RECORD_SECONDS = 2.0
 OVERLAY_SECONDS = 3.0
 WINDOW_NAME = "gesture demo"
 
-DEMO_DIR = Path("outputs/local_demo")
+DEMO_DIR = Path("outputs/checkpoints/seed_4")
 CHECKPOINT_PATH = DEMO_DIR / "best_model.pth"
 MODEL_ARGS_PATH = DEMO_DIR / "model_args.json"
-LABEL_MAP_PATH = DEMO_DIR / "processed" / "label_to_index.json"
+LABEL_MAP_PATH = Path("data/processed/seed_4/label_to_index.json")
 LANDMARKER_PATH = Path("src/gesture_transformer/models/hand_landmarker.task")
 
 # MediaPipe 0.10.x no longer ships mp.solutions.hands.HAND_CONNECTIONS.
@@ -273,6 +273,8 @@ def main() -> None:
                 print("Failed to read from webcam.")
                 break
 
+            preview = cv2.flip(frame, 1)
+
             now = time.time()
             key = cv2.waitKey(1) & 0xFF
 
@@ -283,7 +285,7 @@ def main() -> None:
                 recorded.append(frame.copy())
                 remaining = RECORD_SECONDS - (now - record_start)
                 draw_hud(
-                    frame,
+                    preview,
                     [
                         f"RECORDING {remaining:0.1f}s",
                         f"{len(recorded)} frames",
@@ -291,7 +293,7 @@ def main() -> None:
                     ],
                     (0, 0, 255),
                 )
-                cv2.circle(frame, (frame.shape[1] - 30, 30), 12, (0, 0, 255), -1)
+                cv2.circle(preview, (preview.shape[1] - 30, 30), 12, (0, 0, 255), -1)
 
                 if remaining <= 0 or key == ord(" "):
                     state = "classifying"
@@ -301,21 +303,21 @@ def main() -> None:
                     lines = overlay_lines + lines
                 else:
                     overlay_probabilities = None
-                draw_hud(frame, lines, (0, 255, 0))
+                draw_hud(preview, lines, (0, 255, 0))
 
                 if overlay_probabilities is not None:
-                    draw_bars(frame, list(overlay_probabilities), labels)
+                    draw_bars(preview, list(overlay_probabilities), labels)
 
                 if key == ord(" "):
                     state = "recording"
                     recorded = []
                     record_start = time.time()
 
-            live = extractor.extract([frame])
+            live = extractor.extract([preview])
             if live.landmarks is not None and len(live.landmarks) > 0:
-                draw_hand_landmarks(frame, live.landmarks[0])
+                draw_hand_landmarks(preview, live.landmarks[0])
 
-            cv2.imshow(WINDOW_NAME, frame)
+            cv2.imshow(WINDOW_NAME, preview)
 
             if state == "classifying":
                 probabilities = classify_clip(

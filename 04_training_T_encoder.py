@@ -127,17 +127,14 @@ def main(seed: int) -> None:
             "Label mapping indices must be contiguous from 0 to num_classes - 1."
         )
 
+    model_args = {
+        "input_dim": input_dim,
+        "max_len": sequence_length,
+        "num_classes": num_classes,
+        **MODEL_SETTINGS,
+    }
     # Initialize the GestureTransformer model
-    model = GestureTransformer(
-        input_dim=input_dim,
-        max_len=sequence_length,
-        num_classes=num_classes,
-        hidden_dim=MODEL_SETTINGS["hidden_dim"],
-        num_layers=MODEL_SETTINGS["num_layers"],
-        num_heads=MODEL_SETTINGS["num_heads"],
-        dim_feedforward=MODEL_SETTINGS["dim_feedforward"],
-        dropout=MODEL_SETTINGS["dropout"],
-    )
+    model = GestureTransformer(**model_args)
     model.to(TRAINING_DEVICE)
     print("Selected device:", TRAINING_DEVICE)
 
@@ -192,6 +189,9 @@ def main(seed: int) -> None:
         encoding="utf-8",
     ) as file:
         json.dump(history, file, indent=4)
+
+    with (checkpoint_dir / "models_args.json").open("w", encoding="utf-8") as file:
+        json.dump(model_args, file, indent=4)
 
     # Restore the checkpoint with the lowest validation loss.
     checkpoint = torch.load(
