@@ -9,7 +9,7 @@ Author:
     Hristo Hristov
 """
 
-from config import PROCESSED_DIR, PROJECT_ROOT
+from config import PROCESSED_DIR, PROJECT_ROOT, LANDMARK_OUTPUT_DIR
 from gesture_transformer.datasets.landmark_extraction.landmark_extractor import (
     LandmarkExtractor,
 )
@@ -28,7 +28,7 @@ from gesture_transformer.recording import (
 )
 
 if __name__ == "__main__":
-    LABEL = Label.SWIPING_RIGHT
+    LABEL = Label.SWIPING_DOWN
     SPLIT = Split.TEST
     TEST_USER = 1
 
@@ -44,6 +44,7 @@ if __name__ == "__main__":
             / "manifests"
             / "test"
             / f"user_{TEST_USER}_manifest.csv",
+            landmarks_dir=LANDMARK_OUTPUT_DIR / "test" / f"user_{TEST_USER}"
         )
     else:
         recorder_config = RecorderConfig(active_label=LABEL, active_split=SPLIT)
