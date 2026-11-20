@@ -2,6 +2,7 @@
 
 import json
 import statistics
+import time
 
 import torch
 from sklearn.metrics import classification_report, confusion_matrix, f1_score
@@ -67,6 +68,27 @@ def predict(model: GestureTransformer, data: dict) -> list[int]:
 
     return model(data["x"], padding_mask).argmax(dim=1).tolist()
 
+def measure_latency(model, x, padding_mask, device, warmup=20, runs=300):
+    """Time how long the model takes to classify one clip, in milliseconds."""
+
+    model = model.to(device)
+    x = x.to(device)
+    padding_mask = padding_mask.to(device)
+
+    for _ in range(warmup):
+        model(x, padding_mask)
+    if device == "cuda":
+        torch.cuda.synchronize()
+
+    times = []
+    for _ in range(runs):
+        start = time.perf_counter()
+        model(x, padding_mask)
+        if device == "cuda":
+            torch.cuda.synchronize()
+        times.append((time.perf_counter() - start) * 1000)
+
+    return times
 
 def main() -> None:
     data, users = load_test_data()
@@ -114,6 +136,22 @@ def main() -> None:
     print(
         f"Macro-F1: {statistics.mean(macro_f1s):.4f} ± {statistics.stdev(macro_f1s):.4f}"
     )
+
+    print("\n=== Inference latency (one clip) ===")
+
+    model = load_model(SEEDS[0])
+    x = data["x"][0:1]
+    padding_mask = data["mask"][0:1] == 0
+
+    devices = ["cpu"]
+    if torch.cuda.is_available():
+        devices.append("cuda")
+
+    for device in devices:
+        times = measure_latency(model, x, padding_mask, device)
+        median = statistics.median(times)
+        p95 = statistics.quantiles(times, n=100)[94]
+        print(f"{device}: median {median:.2f} ms, p95 {p95:.2f} ms")
 
 
 if __name__ == "__main__":
