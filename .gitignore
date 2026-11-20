@@ -49,6 +49,7 @@ src/gesture_transformer/models/hand_landmarker.task
 # Data files
 data/manifests/samples.csv
 data/manifests/recorded_samples.csv
+data/manifests/test
 
 # Recorded landmarks and metadata are version controlled so sessions merge
 # through git. Needs the "/*" form: git will not descend into a directory
