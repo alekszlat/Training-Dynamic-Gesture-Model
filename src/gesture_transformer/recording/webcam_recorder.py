@@ -13,7 +13,7 @@ from pathlib import Path
 
 import cv2 as cv
 
-from gesture_transformer.recording.recorder_config import RecorderConfig
+from gesture_transformer.recording.recorder_config import Label, RecorderConfig
 
 WINDOW_NAME = "Sample Recording"
 
@@ -21,11 +21,41 @@ IDLE_HINTS = [
     "space / left click  = start take",
     "q / middle click    = stop take",
     "e                   = end session",
+    "click a gesture     = switch label",
 ]
 
 RECORDING_HINTS = [
     "RECORDING",
     "q / middle click = stop take",
+]
+
+NO_LABEL_HINT = "pick a gesture to start"
+
+# The buttons start below the last idle hint, which _draw_hints puts at y=108.
+# BUTTON_WIDTH fits doing_other_things, the longest label, at the button font size.
+BUTTON_LEFT = 10
+BUTTON_TOP = 126
+BUTTON_WIDTH = 200
+BUTTON_HEIGHT = 32
+BUTTON_GAP = 6
+
+ACTIVE_BUTTON_COLOUR = (0, 160, 0)
+INACTIVE_BUTTON_COLOUR = (60, 60, 60)
+BUTTON_TEXT_COLOUR = (255, 255, 255)
+NO_LABEL_COLOUR = (0, 255, 255)
+
+# One (label, (x, y, width, height)) entry per label, top to bottom, in frame pixels.
+LABEL_BUTTONS = [
+    (
+        label,
+        (
+            BUTTON_LEFT,
+            BUTTON_TOP + index * (BUTTON_HEIGHT + BUTTON_GAP),
+            BUTTON_WIDTH,
+            BUTTON_HEIGHT,
+        ),
+    )
+    for index, label in enumerate(Label)
 ]
 
 
@@ -47,6 +77,7 @@ class WebcamRecorder:
         self.recorder = cv.VideoCapture(recorder_config.webcam_id)
         self.start_clicked = False
         self.stop_clicked = False
+        self.is_idle = False
 
         if not self.recorder.isOpened():
             raise RuntimeError(
@@ -86,11 +117,14 @@ class WebcamRecorder:
         """
         Show a live preview until the user starts the next take or ends the session.
 
+        The preview shows one button per label, and clicking a button switches the
+        active label. A start is ignored while no label is active.
+
         Returns:
             True to record the next take, False to end the session.
         """
 
-        print("Space to record, 'e' to end the session.")
+        print("Space to record, 'e' to end, click a gesture to switch label.")
 
         # Created before the loop so waitKey has a window to read keys from even
         # while the camera is still warming up, and raised so it takes focus.
@@ -100,20 +134,29 @@ class WebcamRecorder:
         cv.setMouseCallback(WINDOW_NAME, self._on_mouse)
 
         self.start_clicked = False
+        self.is_idle = True
 
         while True:
             success, frame = self.recorder.read()
 
             if success:
                 self._draw_hints(frame, IDLE_HINTS, (0, 255, 0))
+                self._draw_label_buttons(frame)
                 cv.imshow(WINDOW_NAME, frame)
 
             key = cv.waitKey(1)  # ms
 
             if key == ord(" ") or self.start_clicked:
-                return True
+                if self.recorder_config.active_label is not None:
+                    self.is_idle = False
+                    return True
+
+                # If the ignored start click stayed set, the next click on a
+                # label button would start a take immediately.
+                self.start_clicked = False
 
             if key == ord("e"):
+                self.is_idle = False
                 cv.destroyAllWindows()
                 return False
 
@@ -175,12 +218,14 @@ class WebcamRecorder:
         Record clicks on the preview window so takes can run without the keyboard.
 
         Using the mouse leaves the recording hand free to change body position and
-        distance between takes.
+        distance between takes. A left click on a label button switches the label
+        instead of starting a take. Label buttons work only between takes, so the
+        label cannot change while a take records.
 
         Args:
             event: OpenCV mouse event code.
-            x: Cursor column. Unused.
-            y: Cursor row. Unused.
+            x: Cursor column, in frame pixels.
+            y: Cursor row, in frame pixels.
             flags: Event flags. Unused.
             param: Callback data. Unused.
 
@@ -189,9 +234,76 @@ class WebcamRecorder:
         """
 
         if event == cv.EVENT_LBUTTONDOWN:
-            self.start_clicked = True
+            clicked_label = self._label_at(x, y) if self.is_idle else None
+
+            if clicked_label is not None:
+                self.recorder_config.active_label = clicked_label
+            else:
+                self.start_clicked = True
         elif event == cv.EVENT_MBUTTONDOWN:
             self.stop_clicked = True
+
+    def _label_at(self, x: int, y: int) -> Label | None:
+        """
+        Find the label button under a point on the preview.
+
+        Args:
+            x: Column, in frame pixels.
+            y: Row, in frame pixels.
+
+        Returns:
+            The label of the button under the point, or None outside every button.
+        """
+
+        for label, (left, top, width, height) in LABEL_BUTTONS:
+            if left <= x < left + width and top <= y < top + height:
+                return label
+
+        return None
+
+    def _draw_label_buttons(self, frame) -> None:
+        """
+        Draw one button per label onto a preview frame, the active one highlighted.
+
+        Args:
+            frame: Frame to draw on, modified in place.
+
+        Returns:
+            None.
+        """
+
+        active_label = self.recorder_config.active_label
+
+        for label, (left, top, width, height) in LABEL_BUTTONS:
+            colour = (
+                ACTIVE_BUTTON_COLOUR
+                if label is active_label
+                else INACTIVE_BUTTON_COLOUR
+            )
+            cv.rectangle(
+                frame, (left, top), (left + width, top + height), colour, cv.FILLED
+            )
+            cv.putText(
+                frame,
+                label.value,
+                (left + 8, top + 22),
+                cv.FONT_HERSHEY_SIMPLEX,
+                0.55,
+                BUTTON_TEXT_COLOUR,
+                1,
+            )
+
+        if active_label is None:
+            _, last_top, _, last_height = LABEL_BUTTONS[-1][1]
+            cv.putText(
+                frame,
+                NO_LABEL_HINT,
+                (BUTTON_LEFT, last_top + last_height + 24),
+                cv.FONT_HERSHEY_SIMPLEX,
+                0.6,
+                NO_LABEL_COLOUR,
+                2,
+            )
 
     def _draw_hints(self, frame, lines: list[str], colour: tuple) -> None:
         """

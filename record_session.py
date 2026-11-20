@@ -1,9 +1,12 @@
 """
 Entry point for a webcam recording session.
 
-Set LABEL and SPLIT below, then run:
+Set SPLIT, and TEST_USER for the test split, below, then run:
 
     uv run python record_session.py
+
+LABEL is only the gesture the session starts on. Click a gesture in the preview
+window to switch it between takes.
 
 Author:
     Hristo Hristov
