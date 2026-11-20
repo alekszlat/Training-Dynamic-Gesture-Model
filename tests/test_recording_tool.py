@@ -44,7 +44,12 @@ from gesture_transformer.recording import (
     TakeValidator,
     WebcamRecorder,
 )
-from gesture_transformer.recording.webcam_recorder import WINDOW_NAME
+from gesture_transformer.recording.webcam_recorder import (
+    ACTIVE_BUTTON_COLOUR,
+    INACTIVE_BUTTON_COLOUR,
+    LABEL_BUTTONS,
+    WINDOW_NAME,
+)
 
 # ---------------------------------------------------------------------------
 # Recording Config
@@ -237,6 +242,7 @@ def cv_mock(mocker):
         "WINDOW_NORMAL",
         "WND_PROP_TOPMOST",
         "FONT_HERSHEY_SIMPLEX",
+        "FILLED",
     ):
         setattr(cv, name, getattr(real_cv2, name))
 
@@ -247,6 +253,40 @@ def cv_mock(mocker):
 def active_label():
     """Any real Label member, for tests that need a non-None label."""
     return next(iter(Label))
+
+
+@pytest.fixture
+def other_label(active_label):
+    """A real Label member other than active_label, for tests that switch labels."""
+    return next(label for label in Label if label is not active_label)
+
+
+OUTSIDE_THE_BUTTONS = (0, 0)
+
+
+def button_centre(label):
+    """A point on the preview inside the button for label."""
+    left, top, width, height = dict(LABEL_BUTTONS)[label]
+    return left + width // 2, top + height // 2
+
+
+def left_click_on_each_show(cv_mock, points):
+    """
+    Left-click the preview once per frame shown, at each point in turn.
+
+    A None point is a frame the user does not click, and frames shown after the
+    last point get no click.
+    """
+    pending = list(points)
+
+    def on_show(*_args):
+        point = pending.pop(0) if pending else None
+
+        if point is not None:
+            on_mouse = cv_mock.setMouseCallback.call_args.args[1]
+            on_mouse(real_cv2.EVENT_LBUTTONDOWN, *point, 0, None)
+
+    cv_mock.imshow.side_effect = on_show
 
 
 def test_webcam_recorder_opens_the_camera_with_the_configured_id(cv_mock):
@@ -286,11 +326,11 @@ def test_close_releases_an_open_camera_only_once(cv_mock):
     assert camera.release_calls == 1
 
 
-def test_wait_for_start_with_space_returns_true(cv_mock):
+def test_wait_for_start_with_space_returns_true(cv_mock, active_label):
     # arrange
     cv_mock.VideoCapture.return_value = FakeCapture(frames=[FakeFrame()])
     cv_mock.waitKey.return_value = ord(" ")
-    recorder = WebcamRecorder(RecorderConfig())
+    recorder = WebcamRecorder(RecorderConfig(active_label=active_label))
 
     # act
     should_record = recorder.wait_for_start()
@@ -313,7 +353,7 @@ def test_wait_for_start_with_e_returns_false_and_closes_the_preview(cv_mock):
     cv_mock.destroyAllWindows.assert_called_once()
 
 
-def test_wait_for_start_with_left_click_returns_true(cv_mock):
+def test_wait_for_start_with_left_click_returns_true(cv_mock, active_label):
     # arrange
     cv_mock.VideoCapture.return_value = FakeCapture(frames=[FakeFrame()])
     registered_callbacks = []
@@ -322,12 +362,12 @@ def test_wait_for_start_with_left_click_returns_true(cv_mock):
     )
     # The user clicks the preview the moment it is shown, and presses nothing.
     cv_mock.imshow.side_effect = lambda *_args: registered_callbacks[0](
-        real_cv2.EVENT_LBUTTONDOWN, 0, 0, 0, None
+        real_cv2.EVENT_LBUTTONDOWN, *OUTSIDE_THE_BUTTONS, 0, None
     )
     # Finite, so a recorder that ignored the click fails here instead of
     # spinning in the preview loop forever.
     cv_mock.waitKey.side_effect = [NO_KEY, NO_KEY, NO_KEY]
-    recorder = WebcamRecorder(RecorderConfig())
+    recorder = WebcamRecorder(RecorderConfig(active_label=active_label))
 
     # act
     should_record = recorder.wait_for_start()
@@ -336,13 +376,13 @@ def test_wait_for_start_with_left_click_returns_true(cv_mock):
     assert should_record is True
 
 
-def test_wait_for_start_keeps_previewing_until_a_known_key(cv_mock):
+def test_wait_for_start_keeps_previewing_until_a_known_key(cv_mock, active_label):
     # arrange
     cv_mock.VideoCapture.return_value = FakeCapture(
         frames=[FakeFrame(), FakeFrame(), FakeFrame()]
     )
     cv_mock.waitKey.side_effect = [ord("x"), ord("y"), ord(" ")]
-    recorder = WebcamRecorder(RecorderConfig())
+    recorder = WebcamRecorder(RecorderConfig(active_label=active_label))
 
     # act
     should_record = recorder.wait_for_start()
@@ -351,11 +391,12 @@ def test_wait_for_start_keeps_previewing_until_a_known_key(cv_mock):
     assert should_record is True
 
 
-def test_wait_for_start_ignores_a_stale_start_click(cv_mock):
+def test_wait_for_start_ignores_a_stale_start_click(cv_mock, active_label):
     # arrange
     cv_mock.VideoCapture.return_value = FakeCapture(frames=[FakeFrame()])
     cv_mock.waitKey.return_value = ord("e")
-    recorder = WebcamRecorder(RecorderConfig())
+    # With a label set, only the reset of the stale click can stop this start.
+    recorder = WebcamRecorder(RecorderConfig(active_label=active_label))
     recorder.start_clicked = True
 
     # act
@@ -363,6 +404,127 @@ def test_wait_for_start_ignores_a_stale_start_click(cv_mock):
 
     # assert
     assert should_record is False
+
+
+def test_wait_for_start_without_an_active_label_ignores_a_start(cv_mock):
+    # arrange
+    cv_mock.VideoCapture.return_value = FakeCapture(frames=[FakeFrame(), FakeFrame()])
+    cv_mock.waitKey.side_effect = [ord(" "), ord("e")]
+    recorder = WebcamRecorder(RecorderConfig())  # active_label defaults to None
+
+    # act
+    should_record = recorder.wait_for_start()
+
+    # assert
+    assert should_record is False
+
+
+def test_wait_for_start_does_not_carry_an_ignored_start_over_to_a_picked_label(
+    cv_mock, active_label
+):
+    # arrange
+    # The user clicks to start before picking a gesture, then picks one. The
+    # early click must not start a take the moment a label becomes active.
+    cv_mock.VideoCapture.return_value = FakeCapture(
+        frames=[FakeFrame(), FakeFrame(), FakeFrame()]
+    )
+    left_click_on_each_show(cv_mock, [OUTSIDE_THE_BUTTONS, button_centre(active_label)])
+    cv_mock.waitKey.side_effect = [NO_KEY, NO_KEY, ord("e")]
+    recorder = WebcamRecorder(RecorderConfig())
+
+    # act
+    should_record = recorder.wait_for_start()
+
+    # assert
+    assert should_record is False
+
+
+def test_wait_for_start_with_a_click_on_a_label_button_switches_to_that_label(
+    cv_mock, active_label, other_label
+):
+    # arrange
+    cv_mock.VideoCapture.return_value = FakeCapture(frames=[FakeFrame()])
+    left_click_on_each_show(cv_mock, [button_centre(other_label)])
+    cv_mock.waitKey.side_effect = [ord("e")]
+    config = RecorderConfig(active_label=active_label)
+    recorder = WebcamRecorder(config)
+
+    # act
+    recorder.wait_for_start()
+
+    # assert
+    assert config.active_label is other_label
+
+
+def test_wait_for_start_with_a_click_on_a_label_button_does_not_start_a_take(
+    cv_mock, active_label, other_label
+):
+    # arrange
+    cv_mock.VideoCapture.return_value = FakeCapture(frames=[FakeFrame(), FakeFrame()])
+    left_click_on_each_show(cv_mock, [button_centre(other_label)])
+    cv_mock.waitKey.side_effect = [NO_KEY, ord("e")]
+    recorder = WebcamRecorder(RecorderConfig(active_label=active_label))
+
+    # act
+    should_record = recorder.wait_for_start()
+
+    # assert
+    assert should_record is False
+
+
+def test_wait_for_start_draws_a_button_for_every_label(cv_mock, active_label):
+    # arrange
+    cv_mock.VideoCapture.return_value = FakeCapture(frames=[FakeFrame()])
+    cv_mock.waitKey.return_value = ord("e")
+    recorder = WebcamRecorder(RecorderConfig(active_label=active_label))
+
+    # act
+    recorder.wait_for_start()
+
+    # assert
+    drawn_text = {text_call.args[1] for text_call in cv_mock.putText.call_args_list}
+
+    assert {label.value for label in Label} <= drawn_text
+
+
+def test_wait_for_start_highlights_only_the_active_label(cv_mock, active_label):
+    # arrange
+    cv_mock.VideoCapture.return_value = FakeCapture(frames=[FakeFrame()])
+    cv_mock.waitKey.return_value = ord("e")
+    recorder = WebcamRecorder(RecorderConfig(active_label=active_label))
+
+    # act
+    recorder.wait_for_start()
+
+    # assert
+    fill_colours = [rect.args[3] for rect in cv_mock.rectangle.call_args_list]
+
+    assert fill_colours == [
+        ACTIVE_BUTTON_COLOUR if label is active_label else INACTIVE_BUTTON_COLOUR
+        for label in Label
+    ]
+
+
+def test_start_recording_ignores_a_click_on_a_label_button_during_a_take(
+    cv_mock, active_label, other_label, tmp_path
+):
+    # arrange
+    cv_mock.VideoCapture.return_value = FakeCapture(frames=[FakeFrame(), FakeFrame()])
+    config = RecorderConfig(active_label=active_label, output_dir=tmp_path)
+    recorder = WebcamRecorder(config)
+
+    # A take always follows a preview, which is what registers the mouse callback.
+    cv_mock.waitKey.return_value = ord(" ")
+    recorder.wait_for_start()
+
+    left_click_on_each_show(cv_mock, [button_centre(other_label)])
+    cv_mock.waitKey.return_value = ord("q")
+
+    # act
+    recorder.start_recording()
+
+    # assert
+    assert config.active_label is active_label
 
 
 def test_wait_for_start_sets_up_the_preview_window(cv_mock):

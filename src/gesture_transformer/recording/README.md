@@ -9,23 +9,33 @@ away rather than hours later during the batch pipeline.
 
 ## Usage
 
-Set `LABEL` and `SPLIT` at the top of `record_session.py`, then run:
+Set `SPLIT` (and `TEST_USER` for the test split) at the top of `record_session.py`, then
+run:
 
 ```bash
 uv run python record_session.py
 ```
+
+`LABEL` in the same file is only the gesture the session starts on. Between takes, the
+preview shows one button per gesture with the active one in green, and clicking a button
+switches the label for the takes that follow. One session can therefore record every
+gesture, and each take is filed under the label that was active when it started.
 
 During a session:
 
 | Key | Mouse | Does |
 |---|---|---|
 | `space` | left click | Start the next take. |
+| | left click on a gesture | Switch the label of the next takes. |
 | `q` | middle click | Stop and save the current take. |
 | `e` | | End the session and write its takes out. |
 
 The mouse controls exist so the recording hand stays free, which makes it easier to
 change body position and distance between takes. The controls are also drawn on the
 preview window.
+
+The gesture buttons are only drawn and only respond between takes, so the label cannot
+change while a take records. A take cannot start while no gesture is selected.
 
 Keys only reach the preview window, so click it if it does not have focus. `Ctrl+C` in
 the terminal also ends the session cleanly and still writes out. Do not use `Ctrl+Z`, it
@@ -67,7 +77,7 @@ All settings live in `RecorderConfig` in `recorder_config.py`.
 | `manifest_path` | Manifest takes are appended to. |
 | `metadata_path` | Landmark metadata takes are appended to. |
 | `landmarks_dir` | Folder for the extracted landmark files. |
-| `active_label` | Gesture being recorded. Required. |
+| `active_label` | Gesture the next take is recorded as. Switchable from the preview. |
 | `min_frames` | Fewest frames a take may have. |
 | `min_detection_rate` | Lowest share of frames with a hand, 0 to 1. |
 | `model_path` | MediaPipe model used to check takes. |
