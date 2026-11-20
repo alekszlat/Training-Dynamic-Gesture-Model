@@ -31,9 +31,9 @@ from gesture_transformer.recording import (
 )
 
 if __name__ == "__main__":
-    LABEL = Label.SWIPING_DOWN
+    LABEL = Label.DOING_OTHER_THINGS
     SPLIT = Split.TEST
-    TEST_USER = 1
+    TEST_USER = 5
 
     recorder_config = None
 
