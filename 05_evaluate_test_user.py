@@ -68,6 +68,7 @@ def predict(model: GestureTransformer, data: dict) -> list[int]:
 
     return model(data["x"], padding_mask).argmax(dim=1).tolist()
 
+
 def measure_latency(model, x, padding_mask, device, warmup=20, runs=300):
     """Time how long the model takes to classify one clip, in milliseconds."""
 
@@ -89,6 +90,7 @@ def measure_latency(model, x, padding_mask, device, warmup=20, runs=300):
         times.append((time.perf_counter() - start) * 1000)
 
     return times
+
 
 def main() -> None:
     data, users = load_test_data()

@@ -1,10 +1,11 @@
-#Delete specified samples from the database
-from pathlib import Path
+# Delete specified samples from the database
 import csv
 import os
+from pathlib import Path
 
 PATH_TO_SAMPLES_TO_DELETE = Path("data/manifests/test/user_0_manifest.csv")
 PATH_TO_METADATA_TO_DELETE = Path("data/processed/test/user_0_metadata.csv")
+
 
 def main():
 
@@ -14,7 +15,7 @@ def main():
     if PATH_TO_SAMPLES_TO_DELETE.exists():
         with open(PATH_TO_SAMPLES_TO_DELETE, "r") as f:
             reader = csv.DictReader(f)
-            samples_to_delete = [line['path'] for line in reader]
+            samples_to_delete = [line["path"] for line in reader]
     else:
         print(f"Samples manifest file not found: {PATH_TO_SAMPLES_TO_DELETE}")
 
@@ -22,8 +23,8 @@ def main():
         with open(PATH_TO_METADATA_TO_DELETE, "r") as f:
             reader = csv.DictReader(f)
             for line in reader:
-                if line['path'] in samples_to_delete:
-                    landmark_to_delete[line['path']] = line['landmark_path']
+                if line["path"] in samples_to_delete:
+                    landmark_to_delete[line["path"]] = line["landmark_path"]
     else:
         print(f"Metadata file not found: {PATH_TO_METADATA_TO_DELETE}")
 
@@ -36,7 +37,6 @@ def main():
     print(f"Samples manifest path: {PATH_TO_SAMPLES_TO_DELETE}")
     print(f"Number of samples to delete: {len(samples_to_delete)}")
     print(f"Number of landmarks to delete: {len(landmark_to_delete)}")
-
 
     for sample_path in samples_to_delete:
         if Path(sample_path).exists():
@@ -54,6 +54,7 @@ def main():
 
     os.remove(PATH_TO_SAMPLES_TO_DELETE)
     os.remove(PATH_TO_METADATA_TO_DELETE)
+
 
 if __name__ == "__main__":
     main()

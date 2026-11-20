@@ -1,10 +1,9 @@
 import json
+import statistics
 
 import torch
-from torch import nn
-import statistics
 from sklearn.metrics import f1_score
-from pathlib import Path
+from torch import nn
 
 from config import (
     BATCH_SIZE,
@@ -17,6 +16,7 @@ from config import (
     NUM_EPOCHS,
     NUM_WORKERS,
     PROCESSED_DIR,
+    RUN_LEARNING_CURVE,
     SCHEDULER_FACTOR,
     SCHEDULER_MODE,
     SCHEDULER_PATIENCE,
@@ -24,8 +24,6 @@ from config import (
     TRAIN_FILE,
     TRAINING_DEVICE,
     VAL_FILE,
-    EVALUATION_DIR,
-    RUN_LEARNING_CURVE,
 )
 from gesture_transformer.evaluation.confusion_matrix import save_confusion_matrices
 from gesture_transformer.training.data_loader import create_data_loader
@@ -35,6 +33,7 @@ from gesture_transformer.training.gesture_dataset import (
 )
 from gesture_transformer.training.gesture_transformer_en import GestureTransformer
 from gesture_transformer.training.transformer_en_trainer import Trainer
+
 
 def take_fraction(data: dict, fraction: float) -> dict:
     """Keep the first part of each class. train.pt is already shuffled with the seed."""
@@ -57,6 +56,7 @@ def take_fraction(data: dict, fraction: float) -> dict:
         "labels": [data["labels"][i] for i in keep],
     }
 
+
 def validate_target_range(
     targets: torch.Tensor,
     num_classes: int,
@@ -75,6 +75,7 @@ def validate_target_range(
             f"Found minimum={min_target}, "
             f"maximum={max_target}."
         )
+
 
 def main(seed: int, fraction: float = 1.0) -> float:
     torch.manual_seed(seed)
@@ -233,7 +234,7 @@ def main(seed: int, fraction: float = 1.0) -> float:
             val_data["x"].to(TRAINING_DEVICE),
             (val_data["mask"] == 0).to(TRAINING_DEVICE),
         )
-    
+
     val_macro_f1 = f1_score(val_data["y"], logits.argmax(dim=1).cpu(), average="macro")
 
     save_confusion_matrices(
