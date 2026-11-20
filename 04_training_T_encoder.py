@@ -190,7 +190,7 @@ def main(seed: int) -> None:
     ) as file:
         json.dump(history, file, indent=4)
 
-    with (checkpoint_dir / "models_args.json").open("w", encoding="utf-8") as file:
+    with (checkpoint_dir / "model_args.json").open("w", encoding="utf-8") as file:
         json.dump(model_args, file, indent=4)
 
     # Restore the checkpoint with the lowest validation loss.
