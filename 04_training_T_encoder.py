@@ -2,11 +2,15 @@ import json
 
 import torch
 from torch import nn
+import statistics
+from sklearn.metrics import f1_score
+from pathlib import Path
 
 from config import (
     BATCH_SIZE,
     BEST_MODEL_FILENAME,
     CHECKPOINT_DIR,
+    LEARNING_CURVE_FRACTIONS,
     LEARNING_RATE,
     MIN_LEARNING_RATE,
     MODEL_SETTINGS,
@@ -20,6 +24,8 @@ from config import (
     TRAIN_FILE,
     TRAINING_DEVICE,
     VAL_FILE,
+    EVALUATION_DIR,
+    RUN_LEARNING_CURVE,
 )
 from gesture_transformer.evaluation.confusion_matrix import save_confusion_matrices
 from gesture_transformer.training.data_loader import create_data_loader
@@ -30,6 +36,26 @@ from gesture_transformer.training.gesture_dataset import (
 from gesture_transformer.training.gesture_transformer_en import GestureTransformer
 from gesture_transformer.training.transformer_en_trainer import Trainer
 
+def take_fraction(data: dict, fraction: float) -> dict:
+    """Keep the first part of each class. train.pt is already shuffled with the seed."""
+
+    if fraction >= 1.0:
+        return data
+
+    keep = []
+    for class_id in torch.unique(data["y"]):
+        class_indices = (data["y"] == class_id).nonzero().flatten().tolist()
+        keep += class_indices[: round(len(class_indices) * fraction)]
+    keep = sorted(keep)
+    keep_tensor = torch.tensor(keep)
+
+    return {
+        "x": data["x"][keep_tensor],
+        "y": data["y"][keep_tensor],
+        "mask": data["mask"][keep_tensor],
+        "sample_ids": [data["sample_ids"][i] for i in keep],
+        "labels": [data["labels"][i] for i in keep],
+    }
 
 def validate_target_range(
     targets: torch.Tensor,
@@ -50,8 +76,7 @@ def validate_target_range(
             f"maximum={max_target}."
         )
 
-
-def main(seed: int) -> None:
+def main(seed: int, fraction: float = 1.0) -> float:
     torch.manual_seed(seed)
 
     data_dir = PROCESSED_DIR / f"seed_{seed}"
@@ -60,6 +85,7 @@ def main(seed: int) -> None:
     # Load the training and validation datasets
     loader = GestureDatasetLoader(data_dir)
     train_data = loader.load(TRAIN_FILE)
+    train_data = take_fraction(train_data, fraction)
     val_data = loader.load(VAL_FILE)
 
     input_dim = train_data["x"].shape[-1]
@@ -201,6 +227,15 @@ def main(seed: int) -> None:
     )
     model.load_state_dict(checkpoint["model_state_dict"])
 
+    model.eval()
+    with torch.no_grad():
+        logits = model(
+            val_data["x"].to(TRAINING_DEVICE),
+            (val_data["mask"] == 0).to(TRAINING_DEVICE),
+        )
+    
+    val_macro_f1 = f1_score(val_data["y"], logits.argmax(dim=1).cpu(), average="macro")
+
     save_confusion_matrices(
         model=model,
         data_loader=val_loader,
@@ -209,8 +244,24 @@ def main(seed: int) -> None:
         output_dir=CHECKPOINT_DIR.parent / "evaluation" / f"seed_{seed}",
     )
 
+    return val_macro_f1
+
 
 if __name__ == "__main__":
-    for seed in SEEDS:
-        print(f"\n=== Training with seed {seed} ===")
-        main(seed)
+    if RUN_LEARNING_CURVE:
+        results = {}
+        for fraction in LEARNING_CURVE_FRACTIONS:
+            results[fraction] = []
+            for seed in SEEDS:
+                print(f"\n=== Fraction {fraction}, seed {seed} ===")
+                results[fraction].append(main(seed, fraction))
+        print("\n=== Learning curve: validation macro-F1 ===")
+        for fraction, scores in results.items():
+            print(
+                f"{fraction:>5}: {statistics.mean(scores):.4f} "
+                f"± {statistics.stdev(scores):.4f}   {scores}"
+            )
+    else:
+        for seed in SEEDS:
+            print(f"\n=== Training with seed {seed} ===")
+            main(seed)

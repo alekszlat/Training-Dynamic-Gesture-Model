@@ -206,3 +206,8 @@ MODEL_SETTINGS = {
     "dim_feedforward": 256,
     "dropout": 0.2,
 }
+
+# Learning curve (development only, validation data only).
+RUN_LEARNING_CURVE = True
+LEARNING_CURVE_FRACTIONS = (0.1, 0.25, 0.5, 0.75, 1.0)
+EVALUATION_DIR = PROJECT_ROOT / "outputs" / "evaluation"
